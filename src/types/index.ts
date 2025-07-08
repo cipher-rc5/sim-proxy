@@ -16,6 +16,7 @@ export interface Variables {
   validatedEnv: z.infer<typeof envSchema>;
   requestId: string;
   subrequestCount: number;
+  normalizedAddress?: string; // For address normalization middleware
 }
 
 // Rate limit data structure

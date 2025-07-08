@@ -42,6 +42,16 @@ function getClientIdentifier(c: Context): string {
     'anonymous';
 }
 
+/**
+ * NOTE ON ATOMICITY:
+ * This rate limiter uses a read-modify-write pattern on Cloudflare KV.
+ * While highly available, KV does not guarantee atomicity for this pattern.
+ * Under very high concurrency from a single IP, it's theoretically possible
+ * for the limit to be exceeded slightly.
+ * For most use cases, this is an acceptable trade-off. For guaranteed atomic
+ * counting, the recommended solution is to use Cloudflare Durable Objects,
+ * which would be a more significant architectural change.
+ */
 export const rateLimiter = (options: RateLimitOptions) => {
   const windowMs = parseWindow(options.window);
   const windowSeconds = Math.ceil(windowMs / 1000);
