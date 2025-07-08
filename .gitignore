@@ -169,4 +169,9 @@ dist
 # wrangler project
 
 .dev.vars
+.env.example
+
 .wrangler/
+_dev/
+
+!.dev.vars.example
