@@ -1,6 +1,8 @@
-# Dune Sim API Cloudflare Worker
+# Dune Sim API Cloudflare Worker Proxy
 
-A production-grade Cloudflare Worker that proxies requests to the Dune Sim API with comprehensive validation, authentication, and documentation.
+Cloudflare Worker that proxies requests to the Dune Sim API with comprehensive validation, authentication, and documentation
+
+(Project is still under extensive development, do not use in production yet)
 
 ## Features
 
