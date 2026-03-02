@@ -2,7 +2,7 @@
 
 import { $ } from 'bun';
 
-console.log('🔨 Building Cloudflare Worker with Bun...');
+console.log(' Building Cloudflare Worker with Bun...');
 
 // Clean dist directory
 await $`rm -rf dist`;
@@ -12,7 +12,7 @@ await $`mkdir -p dist`;
 const result = await Bun.build({
   entrypoints: ['./src/index.ts'],
   outdir: './dist',
-  target: 'bun',
+  target: 'browser',
   format: 'esm',
   splitting: false,
   sourcemap: 'external',
@@ -25,14 +25,17 @@ const result = await Bun.build({
 });
 
 if (!result.success) {
-  console.error('❌ Build failed:', result.logs);
+  console.error(' Build failed:', result.logs);
   process.exit(1);
 }
 
-console.log('✅ Build completed successfully!');
-console.log('📦 Output files:', result.outputs.map(o => o.path));
+console.log(' Build completed successfully!');
+console.log(' Output files:', result.outputs.map(o => o.path));
 
-// Copy wrangler.toml to dist
-await $`cp wrangler.toml dist/`;
+// Copy wrangler config to dist for deployment convenience
+const wranglerConfig = Bun.file('wrangler.jsonc');
+if (await wranglerConfig.exists()) {
+  await Bun.write('dist/wrangler.jsonc', wranglerConfig);
+}
 
-console.log('🚀 Ready for deployment!');
+console.log(' Ready for deployment!');

@@ -38,10 +38,14 @@ export function validateRuntimeEnv(env: ValidatedEnv, bindings: { RATE_LIMITER?:
   if (env.NODE_ENV === 'production' && !bindings.RATE_LIMITER) {
     console.warn('[SECURITY WARNING] Rate limiter KV namespace not configured in production environment');
   }
+
+  if (env.NODE_ENV === 'production' && env.ALLOWED_ORIGINS?.includes('*')) {
+    throw new Error('ALLOWED_ORIGINS must not contain wildcard (*) in production');
+  }
 }
 
 // Helper to parse allowed origins
 export function parseAllowedOrigins(allowedOrigins?: string): string[] {
-  if (!allowedOrigins) return ['*'];
+  if (!allowedOrigins) return [];
   return allowedOrigins.split(',').map(o => o.trim()).filter(Boolean);
 }

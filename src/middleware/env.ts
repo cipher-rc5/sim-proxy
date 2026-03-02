@@ -23,7 +23,7 @@ export const envMiddleware = async (c: Context<{ Bindings: Env, Variables: Varia
     if (error instanceof z.ZodError) {
       console.error(
         '[ENV VALIDATION ERROR]',
-        JSON.stringify({ errors: error.errors, timestamp: new Date().toISOString() })
+        JSON.stringify({ errors: error.issues, timestamp: new Date().toISOString() })
       );
 
       // In development, expose validation errors
@@ -31,7 +31,7 @@ export const envMiddleware = async (c: Context<{ Bindings: Env, Variables: Varia
         throw new HTTPException(500, {
           message: 'Invalid environment configuration',
           cause: {
-            errors: error.errors.map(err => ({ path: err.path.join('.'), message: err.message, code: err.code }))
+            errors: error.issues.map(err => ({ path: err.path.join('.'), message: err.message, code: err.code }))
           }
         });
       }

@@ -7,8 +7,7 @@ export const openAPISpec = {
   info: {
     title: 'Dune Sim API Proxy',
     version: API_VERSION,
-    description: `
-A secure proxy for Dune Sim API with authentication and validation.
+    description: `Proxy for Dune Sim API with authentication and validation.
 
 ## Authentication
 All endpoints (except documentation) require Bearer token authentication:
@@ -49,6 +48,20 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
         properties: {
           error: { type: 'string', description: 'Error message' },
           details: { type: 'object', description: 'Additional error details' }
+        }
+      },
+      Warning: {
+        type: 'object',
+        required: ['code', 'message'],
+        properties: {
+          code: { type: 'string', description: 'Machine-readable warning code' },
+          message: { type: 'string', description: 'Human-readable warning details' },
+          chain_ids: {
+            type: 'array',
+            items: { type: 'integer' },
+            description: 'Chain IDs that produced warning conditions'
+          },
+          docs_url: { type: 'string', description: 'Documentation URL for warning context' }
         }
       },
       Health: {
@@ -108,6 +121,54 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
           wallet_address: { type: 'string', description: 'Queried wallet address' },
           transactions: { type: 'array', items: { $ref: '#/components/schemas/Transaction' } },
           errors: { type: 'object', nullable: true, description: 'Any errors encountered' },
+          warnings: { type: 'array', items: { $ref: '#/components/schemas/Warning' } },
+          next_offset: { type: 'string', nullable: true, description: 'Pagination cursor' },
+          request_time: { type: 'string', nullable: true, description: 'Request timestamp' },
+          response_time: { type: 'string', nullable: true, description: 'Response timestamp' }
+        }
+      },
+      ActivityItem: {
+        type: 'object',
+        required: ['type', 'block_time'],
+        properties: {
+          chain_id: { type: 'integer', description: 'Chain ID' },
+          block_number: { type: 'integer', description: 'Block number' },
+          block_time: { type: 'string', description: 'Block timestamp' },
+          tx_hash: { type: 'string', description: 'Transaction hash' },
+          transaction_hash: { type: 'string', description: 'Alternative transaction hash field' },
+          type: { type: 'string', enum: ['send', 'receive', 'mint', 'burn', 'swap', 'approve', 'call'] },
+          asset_type: { type: 'string', enum: ['native', 'erc20', 'erc721', 'erc1155'] },
+          token_address: { type: 'string', nullable: true },
+          token_id: { type: 'string', nullable: true },
+          from: { type: 'string', nullable: true },
+          to: { type: 'string', nullable: true },
+          value: { type: 'string' },
+          value_usd: { type: 'number', nullable: true },
+          function: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              signature: { type: 'string' }
+            }
+          },
+          token_metadata: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              symbol: { type: 'string', nullable: true },
+              decimals: { type: 'integer', nullable: true },
+              price_usd: { type: 'number', nullable: true },
+              logo: { type: 'string', nullable: true }
+            }
+          }
+        }
+      },
+      ActivityResponse: {
+        type: 'object',
+        required: ['activity'],
+        properties: {
+          activity: { type: 'array', items: { $ref: '#/components/schemas/ActivityItem' } },
+          warnings: { type: 'array', items: { $ref: '#/components/schemas/Warning' } },
           next_offset: { type: 'string', nullable: true, description: 'Pagination cursor' },
           request_time: { type: 'string', nullable: true, description: 'Request timestamp' },
           response_time: { type: 'string', nullable: true, description: 'Response timestamp' }
@@ -145,9 +206,108 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
           wallet_address: { type: 'string', description: 'Queried wallet address' },
           balances: { type: 'array', items: { $ref: '#/components/schemas/BalanceData' } },
           errors: { type: 'object', nullable: true, description: 'Any errors encountered' },
+          warnings: { type: 'array', items: { $ref: '#/components/schemas/Warning' } },
           next_offset: { type: 'string', description: 'Pagination cursor' },
           request_time: { type: 'string', nullable: true, description: 'Request timestamp' },
           response_time: { type: 'string', nullable: true, description: 'Response timestamp' }
+        }
+      },
+      CollectibleEntry: {
+        type: 'object',
+        required: ['contract_address', 'token_id'],
+        properties: {
+          contract_address: { type: 'string' },
+          token_standard: { type: 'string', enum: ['ERC721', 'ERC1155'] },
+          token_id: { type: 'string' },
+          chain: { type: 'string' },
+          chain_id: { type: 'integer' },
+          balance: { type: 'string' },
+          is_spam: { type: 'boolean' }
+        }
+      },
+      CollectiblesResponse: {
+        type: 'object',
+        required: ['address', 'entries'],
+        properties: {
+          address: { type: 'string' },
+          entries: { type: 'array', items: { $ref: '#/components/schemas/CollectibleEntry' } },
+          warnings: { type: 'array', items: { $ref: '#/components/schemas/Warning' } },
+          next_offset: { type: 'string' },
+          request_time: { type: 'string' },
+          response_time: { type: 'string' }
+        }
+      },
+      StablecoinsResponse: {
+        type: 'object',
+        required: ['wallet_address', 'balances'],
+        properties: {
+          wallet_address: { type: 'string' },
+          balances: { type: 'array', items: { $ref: '#/components/schemas/BalanceData' } },
+          errors: { type: 'object', nullable: true },
+          warnings: { type: 'array', items: { $ref: '#/components/schemas/Warning' } },
+          next_offset: { type: 'string' },
+          request_time: { type: 'string', nullable: true },
+          response_time: { type: 'string', nullable: true }
+        }
+      },
+      TokenInfoItem: {
+        type: 'object',
+        properties: {
+          chain: { type: 'string' },
+          chain_id: { type: 'integer' },
+          symbol: { type: 'string' },
+          name: { type: 'string' },
+          decimals: { type: 'integer' },
+          price_usd: { type: 'number', nullable: true },
+          logo: { type: 'string', nullable: true }
+        }
+      },
+      TokenInfoResponse: {
+        type: 'object',
+        required: ['contract_address', 'tokens'],
+        properties: {
+          contract_address: { type: 'string' },
+          tokens: { type: 'array', items: { $ref: '#/components/schemas/TokenInfoItem' } },
+          warnings: { type: 'array', items: { $ref: '#/components/schemas/Warning' } },
+          next_offset: { type: 'string' }
+        }
+      },
+      TokenHolder: {
+        type: 'object',
+        required: ['wallet_address', 'balance'],
+        properties: {
+          wallet_address: { type: 'string' },
+          balance: { type: 'string' },
+          first_acquired: { type: 'string' },
+          has_initiated_transfer: { type: 'boolean' }
+        }
+      },
+      TokenHoldersResponse: {
+        type: 'object',
+        required: ['token_address', 'chain_id', 'holders'],
+        properties: {
+          token_address: { type: 'string' },
+          chain_id: { type: 'integer' },
+          holders: { type: 'array', items: { $ref: '#/components/schemas/TokenHolder' } },
+          next_offset: { type: 'string' }
+        }
+      },
+      DefiPosition: {
+        type: 'object',
+        required: ['type'],
+        properties: {
+          type: { type: 'string' },
+          chain_id: { type: 'integer' },
+          usd_value: { type: 'number', nullable: true }
+        }
+      },
+      DefiPositionsResponse: {
+        type: 'object',
+        required: ['positions'],
+        properties: {
+          positions: { type: 'array', items: { $ref: '#/components/schemas/DefiPosition' } },
+          aggregations: { type: 'object' },
+          warnings: { type: 'array', items: { $ref: '#/components/schemas/Warning' } }
         }
       },
       SvmTransaction: {
@@ -360,6 +520,64 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
         }
       }
     },
+    '/v1/evm/activity/{address}': {
+      get: {
+        summary: 'Get EVM activity',
+        description: 'Get chronologically ordered account activity for an EVM address',
+        operationId: 'getEvmActivity',
+        tags: ['EVM'],
+        parameters: [{
+          name: 'address',
+          in: 'path',
+          required: true,
+          description: 'EVM address (0x...)',
+          schema: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
+        }, {
+          name: 'chain_ids',
+          in: 'query',
+          description: 'Comma-separated chain IDs or tags',
+          schema: { type: 'string' }
+        }, {
+          name: 'token_address',
+          in: 'query',
+          description: 'Single token address or comma-separated token addresses',
+          schema: { type: 'string' }
+        }, {
+          name: 'activity_type',
+          in: 'query',
+          description: 'Single value or comma-separated values of send,receive,mint,burn,swap,approve,call',
+          schema: { type: 'string' }
+        }, {
+          name: 'asset_type',
+          in: 'query',
+          description: 'Single value or comma-separated values of native,erc20,erc721,erc1155',
+          schema: { type: 'string' }
+        }, {
+          name: 'limit',
+          in: 'query',
+          description: 'Maximum number of results',
+          schema: { type: 'integer', minimum: 1, maximum: 1000 }
+        }, { name: 'offset', in: 'query', description: 'Pagination cursor', schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Activity list',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ActivityResponse' } } }
+          },
+          '400': {
+            description: 'Bad request',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '500': {
+            description: 'Internal server error',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          }
+        }
+      }
+    },
     '/v1/evm/balances/{address}': {
       get: {
         summary: 'Get EVM balances',
@@ -386,6 +604,18 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
             description: 'Filter by token type',
             schema: { type: 'string', enum: ['erc20', 'native'] }
           },
+          {
+            name: 'exclude_spam_tokens',
+            in: 'query',
+            description: 'Exclude low-liquidity spam tokens from response',
+            schema: { type: 'boolean' }
+          },
+          {
+            name: 'historical_prices',
+            in: 'query',
+            description: 'Comma-separated hour offsets for historical pricing (max 3)',
+            schema: { type: 'string' }
+          },
           { name: 'metadata', in: 'query', description: 'Additional metadata fields', schema: { type: 'string' } },
           {
             name: 'limit',
@@ -399,6 +629,253 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
           '200': {
             description: 'Balance list',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/BalancesResponse' } } }
+          },
+          '400': {
+            description: 'Bad request',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '500': {
+            description: 'Internal server error',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          }
+        }
+      }
+    },
+    '/v1/evm/collectibles/{address}': {
+      get: {
+        summary: 'Get EVM collectibles',
+        description: 'Get NFT collectibles for an EVM address',
+        operationId: 'getEvmCollectibles',
+        tags: ['EVM'],
+        parameters: [{
+          name: 'address',
+          in: 'path',
+          required: true,
+          description: 'EVM address (0x...)',
+          schema: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
+        }, {
+          name: 'chain_ids',
+          in: 'query',
+          description: 'Comma-separated chain IDs or tags',
+          schema: { type: 'string' }
+        }, {
+          name: 'filter_spam',
+          in: 'query',
+          description: 'Hide spam collectibles when true',
+          schema: { type: 'boolean' }
+        }, {
+          name: 'show_spam_scores',
+          in: 'query',
+          description: 'Include spam scoring metadata',
+          schema: { type: 'boolean' }
+        }, {
+          name: 'limit',
+          in: 'query',
+          description: 'Maximum number of results',
+          schema: { type: 'integer', minimum: 1, maximum: 2500 }
+        }, { name: 'offset', in: 'query', description: 'Pagination cursor', schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Collectible list',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/CollectiblesResponse' } } }
+          },
+          '400': {
+            description: 'Bad request',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '500': {
+            description: 'Internal server error',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          }
+        }
+      }
+    },
+    '/v1/evm/stablecoins/{address}': {
+      get: {
+        summary: 'Get EVM stablecoin balances',
+        description: 'Get stablecoin balances for an EVM address',
+        operationId: 'getEvmStablecoins',
+        tags: ['EVM'],
+        parameters: [{
+          name: 'address',
+          in: 'path',
+          required: true,
+          description: 'EVM address (0x...)',
+          schema: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
+        }, {
+          name: 'chain_ids',
+          in: 'query',
+          description: 'Comma-separated chain IDs or tags',
+          schema: { type: 'string' }
+        }, {
+          name: 'filters',
+          in: 'query',
+          description: 'Filter by token type',
+          schema: { type: 'string', enum: ['erc20', 'native'] }
+        }, {
+          name: 'metadata',
+          in: 'query',
+          description: 'Additional metadata fields',
+          schema: { type: 'string' }
+        }, {
+          name: 'exclude_spam_tokens',
+          in: 'query',
+          description: 'Exclude low-liquidity spam tokens from response',
+          schema: { type: 'boolean' }
+        }, {
+          name: 'historical_prices',
+          in: 'query',
+          description: 'Comma-separated hour offsets for historical pricing (max 3)',
+          schema: { type: 'string' }
+        }, {
+          name: 'limit',
+          in: 'query',
+          description: 'Maximum number of results',
+          schema: { type: 'integer', minimum: 1, maximum: 1000 }
+        }, { name: 'offset', in: 'query', description: 'Pagination cursor', schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Stablecoin balances list',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/StablecoinsResponse' } } }
+          },
+          '400': {
+            description: 'Bad request',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '500': {
+            description: 'Internal server error',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          }
+        }
+      }
+    },
+    '/v1/evm/token-info/{address}': {
+      get: {
+        summary: 'Get EVM token info',
+        description: 'Get token information for one token address or native token',
+        operationId: 'getEvmTokenInfo',
+        tags: ['EVM'],
+        parameters: [{
+          name: 'address',
+          in: 'path',
+          required: true,
+          description: 'Token address or native',
+          schema: { type: 'string' }
+        }, {
+          name: 'chain_ids',
+          in: 'query',
+          required: true,
+          description: 'Exactly one chain ID',
+          schema: { type: 'string' }
+        }, {
+          name: 'historical_prices',
+          in: 'query',
+          description: 'Comma-separated hour offsets for historical pricing (max 3)',
+          schema: { type: 'string' }
+        }, {
+          name: 'limit',
+          in: 'query',
+          description: 'Maximum number of results',
+          schema: { type: 'integer', minimum: 1, maximum: 1000 }
+        }, { name: 'offset', in: 'query', description: 'Pagination cursor', schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Token info list',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/TokenInfoResponse' } } }
+          },
+          '400': {
+            description: 'Bad request',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '500': {
+            description: 'Internal server error',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          }
+        }
+      }
+    },
+    '/v1/evm/token-holders/{chain_id}/{address}': {
+      get: {
+        summary: 'Get EVM token holders',
+        description: 'Get holder distribution for a token contract on one chain',
+        operationId: 'getEvmTokenHolders',
+        tags: ['EVM'],
+        parameters: [{
+          name: 'chain_id',
+          in: 'path',
+          required: true,
+          description: 'EVM chain ID',
+          schema: { type: 'integer' }
+        }, {
+          name: 'address',
+          in: 'path',
+          required: true,
+          description: 'Token contract address',
+          schema: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
+        }, {
+          name: 'limit',
+          in: 'query',
+          description: 'Maximum number of results',
+          schema: { type: 'integer', minimum: 1, maximum: 500 }
+        }, { name: 'offset', in: 'query', description: 'Pagination cursor', schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Token holders list',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/TokenHoldersResponse' } } }
+          },
+          '400': {
+            description: 'Bad request',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          },
+          '500': {
+            description: 'Internal server error',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
+          }
+        }
+      }
+    },
+    '/v1/evm/defi-positions/{address}': {
+      get: {
+        summary: 'Get EVM DeFi positions',
+        description: 'Get DeFi positions for an EVM address (proxied from beta upstream path)',
+        operationId: 'getEvmDefiPositions',
+        tags: ['EVM'],
+        parameters: [{
+          name: 'address',
+          in: 'path',
+          required: true,
+          description: 'EVM address (0x...)',
+          schema: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
+        }, {
+          name: 'chain_ids',
+          in: 'query',
+          description: 'Comma-separated chain IDs or tags',
+          schema: { type: 'string' }
+        }],
+        responses: {
+          '200': {
+            description: 'DeFi positions list',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/DefiPositionsResponse' } } }
           },
           '400': {
             description: 'Bad request',

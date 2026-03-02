@@ -11,7 +11,7 @@ export const svmTransactionSchema = z.object({
   block_slot: z.number(),
   block_time: z.number(),
   chain: z.string(),
-  raw_transaction: z.record(z.unknown())
+  raw_transaction: z.record(z.string(), z.unknown())
 });
 
 export const svmTransactionsResponseSchema = z.object({

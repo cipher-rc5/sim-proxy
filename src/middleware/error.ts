@@ -48,7 +48,7 @@ export const errorHandler = (err: Error, c: Context<{ Variables: Variables }>): 
     response = { ...errorResponse, timestamp: new Date().toISOString() };
   } else if (err instanceof z.ZodError) {
     status = 400;
-    const formattedErrors = err.errors.map(e => ({
+    const formattedErrors = err.issues.map(e => ({
       path: e.path.join('.'),
       message: e.message,
       code: e.code,

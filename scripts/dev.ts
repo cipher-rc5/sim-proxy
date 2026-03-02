@@ -1,29 +1,19 @@
 // scripts/dev.ts
 
-import { watch } from 'fs';
-
-console.log('🔧 Starting development server...');
+console.log(' Starting development server...');
 
 // Start wrangler dev server
-const wrangler = Bun.spawn(['bunx', 'wrangler', 'dev', '--local'], {
+const wrangler = Bun.spawn(['bunx', 'wrangler', 'dev', '--local', '--env', 'development'], {
   stdout: 'inherit',
   stderr: 'inherit',
   stdin: 'inherit'
 });
 
-// Watch for file changes
-console.log('👀 Watching for changes...');
-
-const srcDir = './src';
-watch(srcDir, { recursive: true }, (event, filename) => {
-  if (filename?.endsWith('.ts')) {
-    console.log(`📝 File changed: ${filename}`);
-  }
-});
+console.log(' Watching for changes...');
 
 // Handle process termination
 process.on('SIGINT', () => {
-  console.log('\n👋 Shutting down...');
+  console.log('\n Shutting down...');
   wrangler.kill();
   process.exit(0);
 });

@@ -40,7 +40,7 @@ export function serializeError(error: unknown, context?: ErrorContext): Serializ
     return {
       message: 'Validation failed',
       name: 'ZodError',
-      zodErrors: error.errors,
+      zodErrors: error.issues,
       stack: error.stack,
       timestamp,
       ...context

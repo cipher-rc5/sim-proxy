@@ -3,7 +3,15 @@
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
-import { CACHE_CONFIG, DEDUP_CONFIG, DUNE_SIM_BASE_ENDPOINT, HEADERS, MAX_RESPONSE_SIZE, MAX_SUBREQUESTS } from '../config/constants';
+import {
+  CACHE_CONFIG,
+  DEDUP_CONFIG,
+  DUNE_SIM_BASE_ENDPOINT,
+  HEADERS,
+  MAX_REQUEST_BODY_SIZE,
+  MAX_RESPONSE_SIZE,
+  MAX_SUBREQUESTS
+} from '../config/constants';
 import type { ValidatedEnv } from '../config/env';
 import type { Variables } from '../types';
 import { serializeError } from '../types/errors';
@@ -118,7 +126,7 @@ async function executeProxyRequest<T extends z.ZodSchema>(
     // Prepare request body for non-GET requests
     let body: string | undefined;
     if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
-      body = await c.req.text();
+      body = await readRequestBodyWithLimit(c.req.raw, MAX_REQUEST_BODY_SIZE);
     }
 
     logger.info('Proxying request', { method: c.req.method, hasBody: !!body, bodySize: body?.length });
@@ -165,9 +173,9 @@ async function executeProxyRequest<T extends z.ZodSchema>(
           });
 
           throw new HTTPException(502, {
-            message: 'Invalid response schema from upstream API',
-            cause: validatedEnv.NODE_ENV === 'development' ? error.errors : undefined
-          });
+              message: 'Invalid response schema from upstream API',
+              cause: validatedEnv.NODE_ENV === 'development' ? error.issues : undefined
+            });
         }
         throw error;
       }
@@ -198,6 +206,28 @@ async function executeProxyRequest<T extends z.ZodSchema>(
       cause: validatedEnv.NODE_ENV === 'development' ? error : undefined
     });
   }
+}
+
+async function readRequestBodyWithLimit(request: Request, maxSize: number): Promise<string> {
+  const contentLength = request.headers.get('content-length');
+  if (contentLength) {
+    const parsed = Number.parseInt(contentLength, 10);
+    if (Number.isFinite(parsed) && parsed > maxSize) {
+      throw new HTTPException(413, {
+        message: `Request body too large: ${parsed} bytes exceeds ${maxSize} bytes limit`
+      });
+    }
+  }
+
+  const bodyText = await request.text();
+  const bodySize = new TextEncoder().encode(bodyText).byteLength;
+  if (bodySize > maxSize) {
+    throw new HTTPException(413, {
+      message: `Request body too large: ${bodySize} bytes exceeds ${maxSize} bytes limit`
+    });
+  }
+
+  return bodyText;
 }
 
 async function processResponse(

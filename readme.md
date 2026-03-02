@@ -6,16 +6,17 @@ Cloudflare Worker that proxies requests to the Dune Sim API with comprehensive v
 
 ## Features
 
-- 🔐 Secure API key authentication using Bearer tokens
-- 🚀 Built with Bun and Hono for optimal performance
-- 📊 Full support for EVM and SVM endpoints
-- 🧪 Comprehensive test suite using Bun's native test runner
-- 🔑 Cryptographically secure API key generation
-- 🌐 CORS enabled for browser-based applications
-- ✅ Zod validation for all inputs and outputs
-- 🔒 T3 Env for type-safe environment variables
-- 📖 Self-hosted Scalar API documentation
-- 🎯 Full TypeScript support with strict typing
+- Secure API key authentication using Bearer tokens
+- Built with Bun and Hono for optimal performance
+- Full support for EVM and SVM endpoints
+- Includes EVM Activity endpoint support
+- Baseline automated tests using Bun's native test runner
+- Cryptographically secure API key generation
+- CORS enabled for browser-based applications
+- Zod validation for all inputs and outputs
+- T3 Env for type-safe environment variables
+- Self-hosted Scalar API documentation
+- Full TypeScript support with strict typing
 
 ## Prerequisites
 
@@ -32,6 +33,7 @@ bun install
 ```
 
 to manually install dependencies
+
 ```bash
 bun add hono @hono/zod-validator @scalar/hono-api-reference zod @t3-oss/env-core
 ```
@@ -106,8 +108,11 @@ The worker includes self-hosted API documentation powered by Scalar. Once deploy
 
 - **Interactive API Docs**: `https://your-worker.workers.dev/docs`
 - **OpenAPI Spec**: `https://your-worker.workers.dev/openapi.json`
+- **Upstream Sim docs index**: `https://docs.sim.dune.com/llms.txt`
+- **Upstream Sim full docs**: `https://docs.sim.dune.com/llms-full.txt`
 
 The documentation includes:
+
 - Complete endpoint descriptions
 - Request/response schemas
 - Try-it-out functionality
@@ -119,32 +124,79 @@ The documentation includes:
 #### EVM Endpoints
 
 1. **Get Supported Chains**
+
 ```bash
 curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   https://your-worker.workers.dev/v1/evm/supported-chains/balances
 ```
 
 2. **Get EVM Transactions**
+
 ```bash
 curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   "https://your-worker.workers.dev/v1/evm/transactions/0xYOUR_ADDRESS?chain_ids=1,10&limit=100"
 ```
 
 3. **Get EVM Balances**
+
 ```bash
 curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   "https://your-worker.workers.dev/v1/evm/balances/0xYOUR_ADDRESS?chain_ids=mainnet"
 ```
 
+4. **Get EVM Activity**
+
+```bash
+curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
+  "https://your-worker.workers.dev/v1/evm/activity/0xYOUR_ADDRESS?chain_ids=1&limit=50"
+```
+
+5. **Get EVM Collectibles**
+
+```bash
+curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
+  "https://your-worker.workers.dev/v1/evm/collectibles/0xYOUR_ADDRESS?chain_ids=1&limit=100"
+```
+
+6. **Get Stablecoin Balances**
+
+```bash
+curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
+  "https://your-worker.workers.dev/v1/evm/stablecoins/0xYOUR_ADDRESS?chain_ids=1"
+```
+
+7. **Get Token Info**
+
+```bash
+curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
+  "https://your-worker.workers.dev/v1/evm/token-info/native?chain_ids=1"
+```
+
+8. **Get Token Holders**
+
+```bash
+curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
+  "https://your-worker.workers.dev/v1/evm/token-holders/1/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48?limit=100"
+```
+
+9. **Get DeFi Positions**
+
+```bash
+curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
+  "https://your-worker.workers.dev/v1/evm/defi-positions/0xYOUR_ADDRESS?chain_ids=1"
+```
+
 #### SVM Endpoints (Beta)
 
 1. **Get SVM Transactions**
+
 ```bash
 curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   "https://your-worker.workers.dev/beta/svm/transactions/YOUR_SOLANA_ADDRESS?limit=10"
 ```
 
 2. **Get SVM Balances**
+
 ```bash
 curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   "https://your-worker.workers.dev/beta/svm/balances/YOUR_SOLANA_ADDRESS?chains=solana"
@@ -160,20 +212,26 @@ curl -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
 ## Validation & Security
 
 ### Environment Variables
+
 All environment variables are validated using [@t3-oss/env-core](https://github.com/t3-oss/t3-env):
+
 - `DUNE_SIM_API_KEY`: Your Dune Sim API key (required)
 - `WORKER_API_KEY`: Generated worker API key (min 32 characters)
 - `NODE_ENV`: Environment mode (development/production/test)
 
 ### Request Validation
+
 All requests are validated using Zod schemas:
+
 - EVM addresses must match `0x[40 hex chars]` format
 - SVM addresses must be 32-44 characters
 - Query parameters are strictly typed and validated
 - Response data from upstream API is validated before returning
 
 ### Error Handling
+
 Comprehensive error handling with detailed messages:
+
 - `400`: Validation errors with specific details
 - `401`: Authentication failures
 - `404`: Route not found
@@ -191,10 +249,9 @@ The API returns standard HTTP status codes:
 - `500`: Internal Server Error
 
 Error response format:
+
 ```json
-{
-  "error": "Error message here"
-}
+{ "error": "Error message here" }
 ```
 
 ## Project Structure
@@ -227,6 +284,7 @@ src/
 ```
 
 This modular structure provides:
+
 - **Separation of Concerns**: Each module has a specific responsibility
 - **Easy Testing**: Individual components can be tested in isolation
 - **Better Scalability**: New features can be added without touching existing code
@@ -244,7 +302,8 @@ This modular structure provides:
 
 ## Testing
 
-The project includes comprehensive tests for:
+The project includes baseline tests for:
+
 - Authentication flows
 - Input validation
 - API proxying
@@ -253,10 +312,12 @@ The project includes comprehensive tests for:
 - OpenAPI documentation
 
 Run tests with:
+
 ```bash
 bun test              # Run all tests
 bun test --watch      # Watch mode
 bun run type-check    # TypeScript validation
+bun run build         # Build validation
 ```
 
 ## License
@@ -264,6 +325,7 @@ bun run type-check    # TypeScript validation
 MIT
 
 generate llm.md
+
 ```sh
 repomix --style markdown -o llm.md --no-file-summary --verbose
 ```

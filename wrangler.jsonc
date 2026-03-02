@@ -6,7 +6,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sim-proxy",
   "main": "src/index.ts",
-  "compatibility_date": "2025-06-10",
+  "compatibility_date": "2026-03-02",
   "observability": { "enabled": true },
   /**
 	 * Smart Placement
@@ -28,7 +28,10 @@
   "vars": { "NODE_ENV": "production" },
   "env": {
     "production": { "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "your-kv-namespace-id" }] },
-    "development": { "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "your-dev-kv-namespace-id" }] }
+    "development": {
+      "vars": { "NODE_ENV": "development" },
+      "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "your-dev-kv-namespace-id" }]
+    }
   }
   /**
 	 * Note: Use secrets to store sensitive data.

@@ -2,7 +2,7 @@
 
 import type { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { HEADERS, PUBLIC_PATHS } from '../config/constants';
+import { HEADERS, isPublicPath } from '../config/constants';
 import type { ValidatedEnv } from '../config/env';
 import type { Variables } from '../types';
 import { createLogger } from '../utils/logger';
@@ -23,11 +23,7 @@ export const authMiddleware = async (c: Context<{ Variables: Variables }>, next:
   const path = c.req.path;
 
   // Skip auth for public endpoints
-  if (PUBLIC_PATHS.includes(path as any)) {
-    // Add security headers even for public endpoints
-    c.header('X-Content-Type-Options', 'nosniff');
-    c.header('X-Frame-Options', 'DENY');
-    c.header('X-XSS-Protection', '1; mode=block');
+  if (isPublicPath(path)) {
     c.header(HEADERS.REQUEST_ID, c.get('requestId') || '');
 
     return next();
@@ -77,11 +73,7 @@ export const authMiddleware = async (c: Context<{ Variables: Variables }>, next:
   // Authentication successful
   logger.debug('Authentication successful', { path });
 
-  // Add security headers for authenticated requests
-  c.header('X-Content-Type-Options', 'nosniff');
-  c.header('X-Frame-Options', 'DENY');
-  c.header('X-XSS-Protection', '1; mode=block');
-  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  // Add request ID for traceability
   c.header(HEADERS.REQUEST_ID, c.get('requestId') || '');
 
   await next();

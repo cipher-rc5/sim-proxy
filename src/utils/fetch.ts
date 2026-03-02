@@ -7,6 +7,7 @@ export interface FetchRetryOptions {
   maxRetries?: number;
   initialDelay?: number;
   maxDelay?: number;
+  timeoutMs?: number;
   backoffMultiplier?: number;
   shouldRetry?: (response: Response) => boolean;
   onRetry?: (attempt: number, error?: Error) => void;
@@ -46,6 +47,7 @@ export async function fetchWithRetry(
     maxRetries = RETRY_CONFIG.MAX_RETRIES,
     initialDelay = RETRY_CONFIG.INITIAL_DELAY,
     maxDelay = RETRY_CONFIG.MAX_DELAY,
+    timeoutMs = RETRY_CONFIG.REQUEST_TIMEOUT_MS,
     backoffMultiplier = RETRY_CONFIG.BACKOFF_MULTIPLIER,
     shouldRetry = defaultShouldRetry,
     onRetry,
@@ -59,7 +61,18 @@ export async function fetchWithRetry(
     try {
       logger?.debug(`Fetching URL (attempt ${attempt}/${maxRetries})`, { url, method: options.method || 'GET' });
 
-      const response = await fetch(url, options);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs);
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       lastResponse = response;
 
       // Check if we should retry
@@ -80,6 +93,10 @@ export async function fetchWithRetry(
 
       return response;
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger?.warn(`Fetch attempt ${attempt} timed out`, { url, timeoutMs, attempt });
+      }
+
       lastError = error as Error;
 
       logger?.warn(`Fetch attempt ${attempt} failed`, {

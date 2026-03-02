@@ -2,7 +2,7 @@
 
 // API Configuration
 export const DUNE_SIM_BASE_ENDPOINT = 'https://api.sim.dune.com' as const;
-export const API_VERSION = '1.0.0' as const;
+export const API_VERSION = '0.2.0' as const;
 
 // Cloudflare Worker Limits
 export const MAX_RESPONSE_SIZE = 24 * 1024 * 1024; // 24MB (leaving 1MB buffer from 25MB limit)
@@ -10,7 +10,8 @@ export const MAX_SUBREQUESTS = 45; // Leave buffer from 50 limit
 export const MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024; // 10MB request body limit
 
 // Public paths that don't require authentication
-export const PUBLIC_PATHS = ['/health', '/docs', '/scalar', '/openapi.json', '/llms.txt'] as const;
+export const PUBLIC_PATHS = ['/', '/favicon.ico', '/health', '/docs', '/scalar', '/openapi.json', '/llms.txt'] as const;
+export const PUBLIC_PATH_PREFIXES = ['/docs/', '/scalar/'] as const;
 
 // Rate limiting defaults
 export const RATE_LIMIT_DEFAULTS = {
@@ -27,6 +28,7 @@ export const RETRY_CONFIG = {
   MAX_RETRIES: 3,
   INITIAL_DELAY: 1000, // 1 second
   MAX_DELAY: 10000, // 10 seconds
+  REQUEST_TIMEOUT_MS: 15000,
   BACKOFF_MULTIPLIER: 2,
   // Status codes that should not be retried
   NON_RETRYABLE_STATUS: new Set([
@@ -86,3 +88,7 @@ export const HEADERS = {
 
 // Type helper for public paths
 export type PublicPath = typeof PUBLIC_PATHS[number];
+
+export function isPublicPath(path: string): boolean {
+  return PUBLIC_PATHS.includes(path as PublicPath) || PUBLIC_PATH_PREFIXES.some(prefix => path.startsWith(prefix));
+}

@@ -175,3 +175,6 @@ dist
 _dev/
 
 !.dev.vars.example
+bun.lock
+worker-configuration.d.ts
+.DS_Store

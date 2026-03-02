@@ -112,6 +112,10 @@ app.get('/openapi.json', (c) => {
   return c.json(openAPISpec);
 });
 
+// Convenience routes for browsers
+app.get('/', (c) => c.redirect('/docs', 302));
+app.get('/favicon.ico', (c) => c.body(null, 204));
+
 // Scalar API Reference
 app.get(
   '/docs',
@@ -156,6 +160,11 @@ function generateMarkdownFromSpec(spec: typeof openAPISpec): string {
   lines.push(`# ${spec.info.title}`);
   lines.push(`Version: ${spec.info.version}\n`);
   lines.push(`${spec.info.description}\n`);
+
+  lines.push('## Upstream Sim AI Docs\n');
+  lines.push('- Documentation index: `https://docs.sim.dune.com/llms.txt`');
+  lines.push('- Full docs corpus: `https://docs.sim.dune.com/llms-full.txt`');
+  lines.push('- Build with AI guide: `https://docs.sim.dune.com/build-with-ai.md`\n');
 
   // Contact & License
   if (spec.info.contact) {
