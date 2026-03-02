@@ -1,12 +1,8 @@
 // scripts/build.ts
 
-import { $ } from 'bun';
+export {};
 
 console.log(' Building Cloudflare Worker with Bun...');
-
-// Clean dist directory
-await $`rm -rf dist`;
-await $`mkdir -p dist`;
 
 // Build the worker bundle
 const result = await Bun.build({
