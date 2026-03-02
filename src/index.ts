@@ -114,7 +114,16 @@ app.get('/openapi.json', (c) => {
 
 // Convenience routes for browsers
 app.get('/', (c) => c.redirect('/docs', 302));
-app.get('/favicon.ico', (c) => c.body(null, 204));
+app.get('/favicon.svg', (c) => {
+  const svg = `<svg width="1200" height="1200" viewBox="0 0 1200 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1200" height="1200" fill="#0F0F15"/>
+<path d="M1050.21 604.077C1048.55 779.14 944.207 944.627 772.259 1015.85C600.31 1087.07 409.51 1043.84 284.544 921.227L1050.21 604.077Z" fill="white"/>
+<path d="M427.757 184.15C657.424 89.0195 920.727 198.083 1015.86 427.75C1029.79 461.391 1039.34 495.755 1044.77 530.205L236.158 865.145C215.641 836.942 198.092 805.893 184.157 772.252C89.0262 542.584 198.089 279.282 427.757 184.15Z" fill="white"/>
+</svg>`;
+  c.header(HEADERS.CACHE_CONTROL, `public, max-age=${CACHE_CONFIG.DOCUMENTATION_TTL}`);
+  return c.body(svg, 200, { 'Content-Type': 'image/svg+xml' });
+});
+app.get('/favicon.ico', (c) => c.redirect('/favicon.svg', 301));
 
 // Scalar API Reference
 app.get(
