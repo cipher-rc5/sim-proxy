@@ -23,7 +23,7 @@
     "@scalar/hono-api-reference": "0.9.46",
     "@scalar/openapi-types": "0.5.3",
     "@t3-oss/env-core": "0.13.10",
-    "hono": "4.12.3",
+    "hono": "4.12.7",
     "zod": "4.3.6"
   }
 }
