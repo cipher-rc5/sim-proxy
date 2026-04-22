@@ -4,11 +4,13 @@ import { Schema } from 'effect';
 
 export const errorSchema = Schema.Struct({
   error: Schema.String,
-  details: Schema.optional(Schema.Union(
-    Schema.String,
-    Schema.Record({ key: Schema.String, value: Schema.Unknown }),
-    Schema.Array(Schema.Unknown)
-  )),
+  details: Schema.optional(
+    Schema.Union(
+      Schema.String,
+      Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+      Schema.Array(Schema.Unknown)
+    )
+  ),
   requestId: Schema.optional(Schema.String)
 });
 
@@ -20,9 +22,10 @@ export const warningSchema = Schema.Struct({
 });
 
 export const paginationQuerySchema = Schema.Struct({
-  limit: Schema.optional(
-    Schema.NumberFromString.pipe(Schema.filter(n => n >= 1 && n <= 1000, { message: () => 'limit must be between 1 and 1000' }))
-  ),
+  limit: Schema.optional(Schema.NumberFromString.pipe(Schema.filter(n =>
+    n >= 1 && n <= 1000, {
+    message: () => 'limit must be between 1 and 1000'
+  }))),
   offset: Schema.optional(Schema.String)
 });
 

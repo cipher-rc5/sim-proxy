@@ -13,21 +13,13 @@ export const envSchema = Schema.Struct({
     Schema.minLength(32, { message: () => 'WORKER_API_KEY must be at least 32 characters' }),
     Schema.pattern(apiKeyPattern, { message: () => 'Invalid API key format' })
   ),
-  NODE_ENV: Schema.optionalWith(
-    Schema.Literal('development', 'production', 'test'),
-    { default: () => 'production' as const }
-  ),
-  ALLOWED_ORIGINS: Schema.optional(
-    Schema.String.pipe(
-      Schema.filter(
-        (val) => {
-          const origins = val.split(',').map(o => o.trim()).filter(Boolean);
-          return origins.every(o => o === '*' || /^https?:\/\/.+/.test(o));
-        },
-        { message: () => 'Invalid origin format: each origin must be "*" or start with http:// or https://' }
-      )
-    )
-  )
+  NODE_ENV: Schema.optionalWith(Schema.Literal('development', 'production', 'test'), {
+    default: () => 'production' as const
+  }),
+  ALLOWED_ORIGINS: Schema.optional(Schema.String.pipe(Schema.filter((val) => {
+    const origins = val.split(',').map(o => o.trim()).filter(Boolean);
+    return origins.every(o => o === '*' || /^https?:\/\/.+/.test(o));
+  }, { message: () => 'Invalid origin format: each origin must be "*" or start with http:// or https://' })))
 });
 
 // Type for the validated environment

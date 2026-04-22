@@ -1,31 +1,9 @@
 // src/routes/evm.ts
 
+import { Schema } from 'effect';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { Schema } from 'effect';
-import {
-  type ActivityResponse,
-  activityResponseSchema,
-  type BalancesResponse,
-  balancesResponseSchema,
-  chainsResponseSchema,
-  collectiblesResponseSchema,
-  defiPositionsResponseSchema,
-  evmActivityQuerySchema,
-  evmAddressSchema,
-  evmBalancesQuerySchema,
-  evmCollectiblesQuerySchema,
-  evmDefiPositionsQuerySchema,
-  evmStablecoinsQuerySchema,
-  evmTokenHoldersQuerySchema,
-  evmTokenInfoQuerySchema,
-  evmTransactionsQuerySchema,
-  stablecoinsResponseSchema,
-  tokenHoldersResponseSchema,
-  tokenInfoResponseSchema,
-  type TransactionsResponse,
-  transactionsResponseSchema
-} from '../schemas/evm';
+import { type ActivityResponse, activityResponseSchema, type BalancesResponse, balancesResponseSchema, chainsResponseSchema, collectiblesResponseSchema, defiPositionsResponseSchema, evmActivityQuerySchema, evmAddressSchema, evmBalancesQuerySchema, evmCollectiblesQuerySchema, evmDefiPositionsQuerySchema, evmStablecoinsQuerySchema, evmTokenHoldersQuerySchema, evmTokenInfoQuerySchema, evmTransactionsQuerySchema, stablecoinsResponseSchema, tokenHoldersResponseSchema, tokenInfoResponseSchema, type TransactionsResponse, transactionsResponseSchema } from '../schemas/evm';
 import type { Variables } from '../types';
 import { createLogger } from '../utils/logger';
 import { proxyRequest } from '../utils/proxy';
@@ -156,10 +134,13 @@ evmRoutes.get(
 // Token holders endpoint
 evmRoutes.get(
   '/token-holders/:chain_id/:address',
-  schemaValidator('param', Schema.Struct({
-    chain_id: Schema.NumberFromString.pipe(Schema.int(), Schema.positive()),
-    address: evmAddressSchema
-  })),
+  schemaValidator(
+    'param',
+    Schema.Struct({
+      chain_id: Schema.NumberFromString.pipe(Schema.int(), Schema.positive()),
+      address: evmAddressSchema
+    })
+  ),
   schemaValidator('query', evmTokenHoldersQuerySchema),
   async (c) => {
     const { chain_id, address } = c.req.valid('param');

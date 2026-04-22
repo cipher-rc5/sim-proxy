@@ -3,10 +3,7 @@
 import { Schema } from 'effect';
 import { paginationQuerySchema } from './common';
 
-export const svmAddressSchema = Schema.String.pipe(
-  Schema.minLength(32),
-  Schema.maxLength(44)
-);
+export const svmAddressSchema = Schema.String.pipe(Schema.minLength(32), Schema.maxLength(44));
 
 export const svmTransactionSchema = Schema.Struct({
   address: Schema.String,

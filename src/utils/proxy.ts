@@ -3,25 +3,11 @@
 import { Cause, Effect, Exit, Option, Schema } from 'effect';
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import {
-  CACHE_CONFIG,
-  DEDUP_CONFIG,
-  DUNE_SIM_BASE_ENDPOINT,
-  HEADERS,
-  MAX_REQUEST_BODY_SIZE,
-  MAX_RESPONSE_SIZE,
-  MAX_SUBREQUESTS
-} from '../config/constants';
+import { CACHE_CONFIG, DEDUP_CONFIG, DUNE_SIM_BASE_ENDPOINT, HEADERS, MAX_REQUEST_BODY_SIZE, MAX_RESPONSE_SIZE, MAX_SUBREQUESTS } from '../config/constants';
 import type { ValidatedEnv } from '../config/env';
-import {
-  BodyTooLargeError,
-  FetchNetworkError,
-  UpstreamParseError,
-  UpstreamSchemaError,
-  type ProxyError
-} from '../types/errors';
-import { serializeError } from '../types/errors';
 import type { Variables } from '../types';
+import { BodyTooLargeError, FetchNetworkError, type ProxyError, UpstreamParseError, UpstreamSchemaError } from '../types/errors';
+import { serializeError } from '../types/errors';
 import { fetchWithRetry } from './fetch';
 import { createChildLogger, createLogger, type Logger } from './logger';
 
@@ -53,17 +39,11 @@ function shouldDeduplicate(method: string): boolean {
 function proxyErrorToHttpException(error: ProxyError, isDevelopment: boolean): HTTPException {
   switch (error._tag) {
     case 'FetchTimeoutError':
-      return new HTTPException(504, {
-        message: `Upstream request timed out after ${error.timeoutMs}ms`
-      });
+      return new HTTPException(504, { message: `Upstream request timed out after ${error.timeoutMs}ms` });
     case 'FetchNetworkError':
-      return new HTTPException(502, {
-        message: 'Failed to connect to upstream API'
-      });
+      return new HTTPException(502, { message: 'Failed to connect to upstream API' });
     case 'UpstreamParseError':
-      return new HTTPException(502, {
-        message: 'Invalid JSON response from upstream API'
-      });
+      return new HTTPException(502, { message: 'Invalid JSON response from upstream API' });
     case 'UpstreamSchemaError':
       return new HTTPException(502, {
         message: 'Invalid response schema from upstream API',
@@ -71,7 +51,9 @@ function proxyErrorToHttpException(error: ProxyError, isDevelopment: boolean): H
       });
     case 'BodyTooLargeError':
       return new HTTPException(413, {
-        message: `${error.source === 'request' ? 'Request' : 'Response'} body too large: ${error.size} bytes exceeds ${error.limit} bytes`
+        message: `${
+          error.source === 'request' ? 'Request' : 'Response'
+        } body too large: ${error.size} bytes exceeds ${error.limit} bytes`
       });
   }
 }
@@ -80,10 +62,7 @@ function proxyErrorToHttpException(error: ProxyError, isDevelopment: boolean): H
  * Run a `ProxyError`-typed Effect and convert typed failures to HTTPException
  * so Hono's `onError` handler can process them normally.
  */
-async function runProxyEffect(
-  effect: Effect.Effect<Response, ProxyError>,
-  isDevelopment: boolean
-): Promise<Response> {
+async function runProxyEffect(effect: Effect.Effect<Response, ProxyError>, isDevelopment: boolean): Promise<Response> {
   const exit = await Effect.runPromiseExit(effect);
 
   if (Exit.isSuccess(exit)) return exit.value;
@@ -110,14 +89,12 @@ function readRequestBodyWithLimit(
   request: Request,
   maxSize: number
 ): Effect.Effect<string, BodyTooLargeError | FetchNetworkError> {
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     const contentLength = request.headers.get('content-length');
     if (contentLength) {
       const parsed = Number.parseInt(contentLength, 10);
       if (Number.isFinite(parsed) && parsed > maxSize) {
-        return yield* Effect.fail(
-          new BodyTooLargeError({ size: parsed, limit: maxSize, source: 'request' })
-        );
+        return yield* Effect.fail(new BodyTooLargeError({ size: parsed, limit: maxSize, source: 'request' }));
       }
     }
 
@@ -128,9 +105,7 @@ function readRequestBodyWithLimit(
 
     const bodySize = new TextEncoder().encode(bodyText).byteLength;
     if (bodySize > maxSize) {
-      return yield* Effect.fail(
-        new BodyTooLargeError({ size: bodySize, limit: maxSize, source: 'request' })
-      );
+      return yield* Effect.fail(new BodyTooLargeError({ size: bodySize, limit: maxSize, source: 'request' }));
     }
 
     return bodyText;
@@ -146,14 +121,14 @@ function processResponse(
   response: Response,
   logger: Logger
 ): Effect.Effect<
-  { data: unknown; bodyText: string; totalSize: number },
+  { data: unknown, bodyText: string, totalSize: number },
   BodyTooLargeError | FetchNetworkError | UpstreamParseError
 > {
   if (!response.body) {
     return Effect.succeed({ data: null, bodyText: '', totalSize: 0 });
   }
 
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     // Buffer the stream with size enforcement
     const { bodyText, totalSize } = yield* Effect.tryPromise({
       try: async () => {
@@ -196,7 +171,7 @@ function processResponse(
 
     // Parse JSON — failure means upstream sent unparseable content
     return yield* Effect.try({
-      try: (): { data: unknown; bodyText: string; totalSize: number } => ({
+      try: (): { data: unknown, bodyText: string, totalSize: number } => ({
         data: JSON.parse(bodyText),
         bodyText,
         totalSize
@@ -227,33 +202,25 @@ function executeProxyRequest<A>(
 ): Effect.Effect<Response, ProxyError> {
   const startTime = Date.now();
 
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     // Read request body for non-GET methods
     let body: string | undefined;
     if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
       body = yield* readRequestBodyWithLimit(c.req.raw, MAX_REQUEST_BODY_SIZE);
     }
 
-    logger.info('Proxying request', {
-      method: c.req.method,
-      hasBody: !!body,
-      bodySize: body?.length
-    });
+    logger.info('Proxying request', { method: c.req.method, hasBody: !!body, bodySize: body?.length });
 
     // Proxy to upstream with retry
-    const response = yield* fetchWithRetry(
-      url.toString(),
-      { method: c.req.method, headers, body },
-      {
-        logger,
-        shouldRetry: (res) => {
-          if (res.ok) return false;
-          if (res.status === 429) return true;
-          if (res.status >= 500) return res.status !== 501 && res.status !== 505;
-          return false;
-        }
+    const response = yield* fetchWithRetry(url.toString(), { method: c.req.method, headers, body }, {
+      logger,
+      shouldRetry: (res) => {
+        if (res.ok) return false;
+        if (res.status === 429) return true;
+        if (res.status >= 500) return res.status !== 501 && res.status !== 505;
+        return false;
       }
-    );
+    });
 
     // Buffer and decode the response body
     const { data, bodyText, totalSize } = yield* processResponse(response, logger);
@@ -278,10 +245,7 @@ function executeProxyRequest<A>(
       });
 
       // Return original data to preserve all upstream fields
-      return new Response(JSON.stringify(data), {
-        status: response.status,
-        headers: createCacheHeaders(url.pathname)
-      });
+      return new Response(JSON.stringify(data), { status: response.status, headers: createCacheHeaders(url.pathname) });
     }
 
     // Upstream returned a non-ok status — forward the body as-is
@@ -299,10 +263,7 @@ function executeProxyRequest<A>(
   }).pipe(
     Effect.tapError((error) =>
       Effect.sync(() =>
-        logger.error('Proxy request failed', {
-          errorTag: error._tag,
-          responseTime: Date.now() - startTime
-        })
+        logger.error('Proxy request failed', { errorTag: error._tag, responseTime: Date.now() - startTime })
       )
     )
   );
@@ -328,10 +289,7 @@ export async function proxyRequest<A>(
   // Guard against runaway subrequest counts
   const requestCount = c.get('subrequestCount') ?? 0;
   if (requestCount >= MAX_SUBREQUESTS) {
-    requestLogger.error('Subrequest limit exceeded', {
-      limit: MAX_SUBREQUESTS,
-      current: requestCount
-    });
+    requestLogger.error('Subrequest limit exceeded', { limit: MAX_SUBREQUESTS, current: requestCount });
     throw new HTTPException(429, {
       message: 'Too many subrequests in this request',
       cause: { limit: MAX_SUBREQUESTS, current: requestCount }
@@ -351,9 +309,7 @@ export async function proxyRequest<A>(
         const response = await inFlight;
         return response.clone();
       } catch (error) {
-        requestLogger.debug('In-flight request failed, making new request', {
-          error: serializeError(error)
-        });
+        requestLogger.debug('In-flight request failed, making new request', { error: serializeError(error) });
       }
     }
   }
@@ -377,4 +333,3 @@ export async function proxyRequest<A>(
 
   return responsePromise;
 }
-

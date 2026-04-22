@@ -4,11 +4,11 @@ import { Schema } from 'effect';
 import { paginationQuerySchema, warningSchema } from './common';
 
 // Boolean coercion helper for query string params ("true"/"false" → boolean)
-const BooleanFromString = Schema.transform(
-  Schema.String,
-  Schema.Boolean,
-  { strict: true, decode: (s) => s === 'true', encode: (b) => String(b) }
-);
+const BooleanFromString = Schema.transform(Schema.String, Schema.Boolean, {
+  strict: true,
+  decode: (s) => s === 'true',
+  encode: (b) => String(b)
+});
 
 // EVM address validation
 export const evmAddressSchema = Schema.String.pipe(
@@ -26,9 +26,7 @@ export const chainEntrySchema = Schema.Struct({
   logo: Schema.optional(Schema.NullOr(Schema.String))
 });
 
-export const chainsResponseSchema = Schema.Struct({
-  chains: Schema.Array(chainEntrySchema)
-});
+export const chainsResponseSchema = Schema.Struct({ chains: Schema.Array(chainEntrySchema) });
 
 // Dune API error structure
 export const duneErrorSchema = Schema.Struct({
@@ -89,12 +87,16 @@ export const balanceDataSchema = Schema.Struct({
   pool_size: Schema.optional(Schema.NullOr(Schema.Number)),
   price_usd: Schema.optional(Schema.NullOr(Schema.Number)),
   symbol: Schema.optional(Schema.NullOr(Schema.String)),
-  token_metadata: Schema.optional(Schema.NullOr(Schema.Struct({
-    logo: Schema.optional(Schema.NullOr(Schema.String)),
-    url: Schema.optional(Schema.NullOr(Schema.String)),
-    description: Schema.optional(Schema.NullOr(Schema.String)),
-    social: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String }))
-  }))),
+  token_metadata: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        logo: Schema.optional(Schema.NullOr(Schema.String)),
+        url: Schema.optional(Schema.NullOr(Schema.String)),
+        description: Schema.optional(Schema.NullOr(Schema.String)),
+        social: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String }))
+      })
+    )
+  ),
   value_usd: Schema.optional(Schema.NullOr(Schema.Number)),
   last_transfer_timestamp: Schema.optional(Schema.NullOr(Schema.String)),
   spam_score: Schema.optional(Schema.NullOr(Schema.Number.pipe(Schema.between(0, 1))))
@@ -130,16 +132,19 @@ export const activityItemSchema = Schema.Struct({
   to: Schema.optional(Schema.NullOr(Schema.String)),
   value: Schema.optional(Schema.String),
   value_usd: Schema.optional(Schema.NullOr(Schema.Number)),
-  function: Schema.optional(Schema.Struct({
-    name: Schema.optional(Schema.String),
-    signature: Schema.optional(Schema.String)
-  })),
-  token_metadata: Schema.optional(Schema.NullOr(Schema.Struct({
-    symbol: Schema.optional(Schema.NullOr(Schema.String)),
-    decimals: Schema.optional(Schema.NullOr(Schema.Number)),
-    price_usd: Schema.optional(Schema.NullOr(Schema.Number)),
-    logo: Schema.optional(Schema.NullOr(Schema.String))
-  })))
+  function: Schema.optional(
+    Schema.Struct({ name: Schema.optional(Schema.String), signature: Schema.optional(Schema.String) })
+  ),
+  token_metadata: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        symbol: Schema.optional(Schema.NullOr(Schema.String)),
+        decimals: Schema.optional(Schema.NullOr(Schema.Number)),
+        price_usd: Schema.optional(Schema.NullOr(Schema.Number)),
+        logo: Schema.optional(Schema.NullOr(Schema.String))
+      })
+    )
+  )
 });
 
 export const activityResponseSchema = Schema.Struct({
@@ -201,15 +206,19 @@ export const tokenHoldersResponseSchema = Schema.Struct({
 });
 
 export const defiPositionsResponseSchema = Schema.Struct({
-  positions: Schema.Array(Schema.Struct({
-    type: Schema.String,
-    chain_id: Schema.optional(Schema.Number),
-    usd_value: Schema.optional(Schema.NullOr(Schema.Number))
-  })),
-  aggregations: Schema.optional(Schema.Struct({
-    total_usd_value: Schema.optional(Schema.Number),
-    total_by_chain: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Number }))
-  })),
+  positions: Schema.Array(
+    Schema.Struct({
+      type: Schema.String,
+      chain_id: Schema.optional(Schema.Number),
+      usd_value: Schema.optional(Schema.NullOr(Schema.Number))
+    })
+  ),
+  aggregations: Schema.optional(
+    Schema.Struct({
+      total_usd_value: Schema.optional(Schema.Number),
+      total_by_chain: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Number }))
+    })
+  ),
   warnings: Schema.optional(Schema.Array(warningSchema))
 });
 
@@ -269,15 +278,14 @@ export const evmTokenInfoQuerySchema = Schema.Struct({
 });
 
 export const evmTokenHoldersQuerySchema = Schema.Struct({
-  limit: Schema.optional(
-    Schema.NumberFromString.pipe(Schema.filter(n => n >= 1 && n <= 500, { message: () => 'limit must be between 1 and 500' }))
-  ),
+  limit: Schema.optional(Schema.NumberFromString.pipe(Schema.filter(n =>
+    n >= 1 && n <= 500, {
+    message: () => 'limit must be between 1 and 500'
+  }))),
   offset: Schema.optional(Schema.String)
 });
 
-export const evmDefiPositionsQuerySchema = Schema.Struct({
-  chain_ids: Schema.optional(Schema.String)
-});
+export const evmDefiPositionsQuerySchema = Schema.Struct({ chain_ids: Schema.optional(Schema.String) });
 
 // Type exports for TypeScript usage
 export type ChainEntry = Schema.Schema.Type<typeof chainEntrySchema>;

@@ -1,7 +1,7 @@
 // src/routes/system.ts
 
-import { Hono } from 'hono';
 import { Schema } from 'effect';
+import { Hono } from 'hono';
 import { API_VERSION, HEADERS } from '../config/constants';
 import { healthSchema } from '../schemas/system';
 import type { Variables } from '../types';

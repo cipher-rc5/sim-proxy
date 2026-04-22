@@ -8,40 +8,29 @@ import { HTTPException } from 'hono/http-exception';
 // ---------------------------------------------------------------------------
 
 /** Network/timeout errors produced by fetch */
-export class FetchTimeoutError extends Data.TaggedError('FetchTimeoutError')<{
-  readonly url: string;
-  readonly timeoutMs: number;
-}> {}
+export class FetchTimeoutError
+  extends Data.TaggedError('FetchTimeoutError')<{ readonly url: string, readonly timeoutMs: number }> {}
 
 /** Any non-timeout network-level failure */
-export class FetchNetworkError extends Data.TaggedError('FetchNetworkError')<{
-  readonly url: string;
-  readonly cause: unknown;
-}> {}
+export class FetchNetworkError
+  extends Data.TaggedError('FetchNetworkError')<{ readonly url: string, readonly cause: unknown }> {}
 
 /** Upstream returned a response body that failed Effect Schema validation */
-export class UpstreamSchemaError extends Data.TaggedError('UpstreamSchemaError')<{
-  readonly message: string;
-  readonly preview: string;
-}> {}
+export class UpstreamSchemaError
+  extends Data.TaggedError('UpstreamSchemaError')<{ readonly message: string, readonly preview: string }> {}
 
 /** Upstream returned a non-JSON body (or unparseable JSON) */
-export class UpstreamParseError extends Data.TaggedError('UpstreamParseError')<{
-  readonly preview: string;
-}> {}
+export class UpstreamParseError extends Data.TaggedError('UpstreamParseError')<{ readonly preview: string }> {}
 
 /** Request or response body exceeded the configured size limit */
-export class BodyTooLargeError extends Data.TaggedError('BodyTooLargeError')<{
-  readonly size: number;
-  readonly limit: number;
-  readonly source: 'request' | 'response';
-}> {}
+export class BodyTooLargeError
+  extends Data.TaggedError('BodyTooLargeError')<
+    { readonly size: number, readonly limit: number, readonly source: 'request' | 'response' }
+  > {}
 
 /** Subrequest limit reached for this request lifecycle */
-export class SubrequestLimitError extends Data.TaggedError('SubrequestLimitError')<{
-  readonly limit: number;
-  readonly current: number;
-}> {}
+export class SubrequestLimitError
+  extends Data.TaggedError('SubrequestLimitError')<{ readonly limit: number, readonly current: number }> {}
 
 /** Union of all errors that can occur inside the proxy pipeline Effect */
 export type ProxyError =
@@ -89,29 +78,13 @@ export function serializeError(error: unknown, context?: ErrorContext): Serializ
 
   // Handle Effect Schema ParseError
   if (error instanceof ParseResult.ParseError) {
-    return {
-      message: error.message,
-      name: 'ParseError',
-      stack: error.stack,
-      timestamp,
-      ...context
-    };
+    return { message: error.message, name: 'ParseError', stack: error.stack, timestamp, ...context };
   }
 
   // Handle Effect tagged errors (Data.TaggedError subclasses have a _tag property)
-  if (
-    error instanceof Error &&
-    '_tag' in error &&
-    typeof (error as { _tag: unknown })._tag === 'string'
-  ) {
+  if (error instanceof Error && '_tag' in error && typeof (error as { _tag: unknown })._tag === 'string') {
     const tagged = error as Error & { _tag: string };
-    return {
-      message: tagged.message,
-      name: tagged._tag,
-      stack: tagged.stack,
-      timestamp,
-      ...context
-    };
+    return { message: tagged.message, name: tagged._tag, stack: tagged.stack, timestamp, ...context };
   }
 
   // Handle HTTPException
@@ -167,18 +140,18 @@ export function createErrorResponse(
   error: unknown,
   context?: ErrorContext,
   isDevelopment = false
-): { error: string; details?: unknown; requestId?: string } {
+): { error: string, details?: unknown, requestId?: string } {
   const serialized = serializeError(error, context);
 
   return {
     error: serialized.message,
-    details: isDevelopment
-      ? {
-          name: serialized.name,
-          ...(serialized.stack && { stack: serialized.stack }),
-          ...(serialized.code && { code: serialized.code })
-        }
-      : undefined,
+    details: isDevelopment ?
+      {
+        name: serialized.name,
+        ...(serialized.stack && { stack: serialized.stack }),
+        ...(serialized.code && { code: serialized.code })
+      } :
+      undefined,
     requestId: context?.requestId
   };
 }

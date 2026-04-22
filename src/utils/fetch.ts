@@ -16,12 +16,7 @@ export interface FetchRetryOptions {
 }
 
 // Exponential backoff with ±25% jitter
-function calculateDelay(
-  attempt: number,
-  initialDelay: number,
-  maxDelay: number,
-  backoffMultiplier: number
-): number {
+function calculateDelay(attempt: number, initialDelay: number, maxDelay: number, backoffMultiplier: number): number {
   const exponentialDelay = initialDelay * Math.pow(backoffMultiplier, attempt - 1);
   const clamped = Math.min(exponentialDelay, maxDelay);
   const jitter = clamped * 0.25 * (Math.random() * 2 - 1);
@@ -54,9 +49,9 @@ function makeRequest(
       }
     },
     catch: (e): FetchTimeoutError | FetchNetworkError =>
-      e instanceof Error && e.name === 'AbortError'
-        ? new FetchTimeoutError({ url, timeoutMs })
-        : new FetchNetworkError({ url, cause: e })
+      e instanceof Error && e.name === 'AbortError' ?
+        new FetchTimeoutError({ url, timeoutMs }) :
+        new FetchNetworkError({ url, cause: e })
   });
 }
 
@@ -85,39 +80,25 @@ export function fetchWithRetry(
     attempt: number,
     lastResponse: Response | null
   ): Effect.Effect<Response, FetchTimeoutError | FetchNetworkError> =>
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       // All retries exhausted
       if (attempt > maxRetries) {
         if (lastResponse) return lastResponse;
         return yield* Effect.fail(
-          new FetchNetworkError({
-            url,
-            cause: new Error(`Failed to fetch after ${maxRetries} attempts`)
-          })
+          new FetchNetworkError({ url, cause: new Error(`Failed to fetch after ${maxRetries} attempts`) })
         );
       }
 
-      logger?.debug(`Fetching URL (attempt ${attempt}/${maxRetries})`, {
-        url,
-        method: options.method ?? 'GET'
-      });
+      logger?.debug(`Fetching URL (attempt ${attempt}/${maxRetries})`, { url, method: options.method ?? 'GET' });
 
       // Attempt the request; on network error optionally retry with backoff
-      const response = yield* makeRequest(url, options, timeoutMs).pipe(
-        Effect.catchAll((networkError) => {
-          logger?.warn(`Fetch attempt ${attempt} failed`, {
-            url,
-            error: networkError.message,
-            attempt
-          });
-          if (attempt >= maxRetries) return Effect.fail(networkError);
-          const delay = calculateDelay(attempt, initialDelay, maxDelay, backoffMultiplier);
-          logger?.info(`Retrying after network error (${delay}ms)`, { url, attempt });
-          return Effect.sleep(Duration.millis(delay)).pipe(
-            Effect.flatMap(() => loop(attempt + 1, null))
-          );
-        })
-      );
+      const response = yield* makeRequest(url, options, timeoutMs).pipe(Effect.catchAll((networkError) => {
+        logger?.warn(`Fetch attempt ${attempt} failed`, { url, error: networkError.message, attempt });
+        if (attempt >= maxRetries) return Effect.fail(networkError);
+        const delay = calculateDelay(attempt, initialDelay, maxDelay, backoffMultiplier);
+        logger?.info(`Retrying after network error (${delay}ms)`, { url, attempt });
+        return Effect.sleep(Duration.millis(delay)).pipe(Effect.flatMap(() => loop(attempt + 1, null)));
+      }));
 
       // HTTP-level retry (429, 5xx, etc.)
       if (attempt < maxRetries && shouldRetry(response)) {
@@ -128,9 +109,7 @@ export function fetchWithRetry(
           status: response.status,
           statusText: response.statusText
         });
-        return yield* Effect.sleep(Duration.millis(delay)).pipe(
-          Effect.flatMap(() => loop(attempt + 1, response))
-        );
+        return yield* Effect.sleep(Duration.millis(delay)).pipe(Effect.flatMap(() => loop(attempt + 1, response)));
       }
 
       return response;
