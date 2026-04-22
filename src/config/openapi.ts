@@ -26,10 +26,9 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
     contact: { name: 'API Support', email: 'support@example.com' },
     license: { name: 'MIT', url: 'https://opensource.org/licenses/MIT' }
   },
-  servers: [{ url: 'https://your-worker.workers.dev', description: 'Production server' }, {
-    url: 'http://localhost:8787',
-    description: 'Local development server'
-  }],
+  // servers is intentionally empty here — the /openapi.json route injects
+  // the origin of the actual request so Scalar always reflects the live instance
+  servers: [] as Array<{ url: string; description: string }>,
   security: [{ bearerAuth: [] }],
   tags: [
     { name: 'System', description: 'System endpoints for health checks and monitoring' },

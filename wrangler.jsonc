@@ -6,7 +6,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sim-proxy",
   "main": "src/index.ts",
-  "compatibility_date": "2026-03-02",
+  "compatibility_date": "2026-04-22",
   "observability": { "enabled": true },
   /**
 	 * Smart Placement
@@ -26,11 +26,15 @@
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
   "vars": { "NODE_ENV": "production" },
+  "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "b133480312ad4f61a6082221e931187d" }],
   "env": {
-    "production": { "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "your-kv-namespace-id" }] },
+    "production": {
+      "vars": { "NODE_ENV": "production" },
+      "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "b133480312ad4f61a6082221e931187d" }]
+    },
     "development": {
       "vars": { "NODE_ENV": "development" },
-      "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "your-dev-kv-namespace-id" }]
+      "kv_namespaces": [{ "binding": "RATE_LIMITER", "id": "b133480312ad4f61a6082221e931187d" }]
     }
   }
   /**

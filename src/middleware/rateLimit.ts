@@ -66,16 +66,10 @@ export const rateLimiter = (options: RateLimitOptions) => {
       return next();
     }
 
-    const validatedEnv = c.get('validatedEnv');
     const kv = c.env.RATE_LIMITER;
 
-    // In production, rate limiter must be configured
-    if (!kv && validatedEnv.NODE_ENV === 'production') {
-      logger.error('Rate limiter KV namespace not configured in production');
-      throw new HTTPException(500, { message: 'Internal server error' });
-    }
-
-    // Skip if KV not available in development
+    // KV not bound — skip rate limiting and warn regardless of environment.
+    // Rate limiting is best-effort; its absence must not break request handling.
     if (!kv) {
       logger.warn('Rate limiter KV namespace not configured, skipping rate limiting');
       return next();
@@ -161,16 +155,8 @@ export const rateLimiter = (options: RateLimitOptions) => {
         throw error;
       }
 
-      // Log KV errors
-      logger.error('Rate limiter error', { error: serializeError(error), key, clientIp });
-
-      // In production, fail closed (deny request)
-      if (validatedEnv.NODE_ENV === 'production') {
-        throw new HTTPException(500, { message: 'Internal server error' });
-      }
-
-      // In development, fail open (allow request)
-      logger.warn('Rate limiter failed open in development mode');
+      // KV errors are non-fatal — log and fail open so the request continues.
+      logger.error('Rate limiter error, failing open', { error: serializeError(error), key, clientIp });
     }
 
     await next();

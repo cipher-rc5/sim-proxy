@@ -106,10 +106,16 @@ app.use('/scalar', createRateLimiter.docs());
 // Authentication middleware
 app.use('*', authMiddleware);
 
-// OpenAPI documentation endpoint
+// OpenAPI documentation endpoint — servers array is derived from the request
+// so Scalar always points at the actual instance (localhost, staging, or prod)
 app.get('/openapi.json', (c) => {
+  const origin = new URL(c.req.url).origin;
+  const spec = {
+    ...openAPISpec,
+    servers: [{ url: origin, description: 'This instance' }]
+  };
   c.header(HEADERS.CACHE_CONTROL, `public, max-age=${CACHE_CONFIG.DOCUMENTATION_TTL}`);
-  return c.json(openAPISpec);
+  return c.json(spec);
 });
 
 // Convenience routes for browsers
@@ -125,34 +131,135 @@ app.get('/favicon.svg', (c) => {
 });
 app.get('/favicon.ico', (c) => c.redirect('/favicon.svg', 301));
 
-// Scalar API Reference
+// Scalar API Reference — Acid & Bone theme
 app.get(
   '/docs',
   Scalar({
     url: '/openapi.json',
     layout: 'modern',
-    theme: 'purple',
+    theme: 'none',
     hideModels: false,
     showSidebar: true,
     searchHotKey: 'k',
     customCss: `
-      .scalar-api-reference {
-        --scalar-color-1: #6b21a8;
-        --scalar-color-2: #a855f7;
-        --scalar-color-accent: #9333ea;
-        --scalar-background-1: #ffffff;
-        --scalar-background-2: #fafafa;
-        --scalar-background-3: #f3f4f6;
-        --scalar-border-color: #e5e7eb;
+      /* ── Layout & Spacing ───────────────────────────────────────────── */
+      :root {
+        --scalar-header-height: 50px;
+        --scalar-sidebar-width: 280px;
+        --scalar-container-width: 680px;
+        --scalar-toc-width: 280px;
+        --scalar-card-icon-width: 40px;
+        --scalar-card-icon-height: 40px;
+        --scalar-card-icon-diameter: 20px;
+        --scalar-card-padding: 16px;
+        --scalar-card-inter-element-gap: 4px;
+        --scalar-toc-indent-unit: 16px;
+        --scalar-row-gap: 16px;
+        --scalar-extra-bold: 700;
+        --scalar-heading-spacing: 44px;
+        --scalar-block-spacing: 12px;
+        --scalar-font-size-1: 24px;
+        --scalar-text-decoration: none;
+        --scalar-text-decoration-hover: underline;
+        --scalar-radius: 0px;
+        --scalar-radius-lg: 0px;
+        --scalar-radius-xl: 0px;
       }
 
-      @media (prefers-color-scheme: dark) {
-        .scalar-api-reference {
-          --scalar-background-1: #111111;
-          --scalar-background-2: #1a1a1a;
-          --scalar-background-3: #252525;
-          --scalar-border-color: #333333;
-        }
+      /* ── Light Mode ─────────────────────────────────────────────────── */
+      .light-mode {
+        /* Backgrounds */
+        --scalar-background-1: #f2efe9;
+        --scalar-background-2: #e8e5de;
+        --scalar-background-3: #dbd8d0;
+        --scalar-background-accent: rgba(220, 238, 36, 0.15);
+
+        /* Text */
+        --scalar-color-1: #141414;
+        --scalar-color-2: #454545;
+        --scalar-color-3: #787878;
+        --scalar-color-accent: #141414;
+
+        /* Borders & Buttons */
+        --scalar-border-color: #dbd8d0;
+        --scalar-button-1: #141414;
+        --scalar-button-1-hover: #000000;
+        --scalar-button-1-color: #dcee24;
+
+        /* Status */
+        --scalar-color-green: #2fa86d;
+        --scalar-color-red: #d92b2b;
+        --scalar-color-yellow: #e6b800;
+        --scalar-color-blue: #2b7dd9;
+        --scalar-color-orange: #e66a00;
+        --scalar-color-purple: #7a2bd9;
+
+        /* Links & Tooltips */
+        --scalar-link-color: var(--scalar-color-1);
+        --scalar-link-color-hover: #dcee24;
+        --scalar-tooltip-background: #141414;
+        --scalar-tooltip-color: #dcee24;
+      }
+
+      /* ── Dark Mode ──────────────────────────────────────────────────── */
+      .dark-mode {
+        /* Backgrounds */
+        --scalar-background-1: #141414;
+        --scalar-background-2: #1f1f1f;
+        --scalar-background-3: #2a2a2a;
+        --scalar-background-accent: rgba(220, 238, 36, 0.15);
+
+        /* Text */
+        --scalar-color-1: #f2efe9;
+        --scalar-color-2: #a1a1a1;
+        --scalar-color-3: #666666;
+        --scalar-color-accent: #dcee24;
+
+        /* Borders & Buttons */
+        --scalar-border-color: #2a2a2a;
+        --scalar-button-1: #dcee24;
+        --scalar-button-1-hover: #c9db1f;
+        --scalar-button-1-color: #141414;
+
+        /* Status */
+        --scalar-color-green: #dcee24;
+        --scalar-color-red: #ff4d4d;
+        --scalar-color-yellow: #ffd633;
+        --scalar-color-blue: #4da6ff;
+        --scalar-color-orange: #ff944d;
+        --scalar-color-purple: #b366ff;
+
+        /* Links & Tooltips */
+        --scalar-link-color: var(--scalar-color-accent);
+        --scalar-link-color-hover: #ffffff;
+        --scalar-tooltip-background: #f2efe9;
+        --scalar-tooltip-color: #141414;
+      }
+
+      /* ── Sidebar (both modes) ───────────────────────────────────────── */
+      .light-mode, .dark-mode {
+        --scalar-sidebar-background-1: var(--scalar-background-2);
+        --scalar-sidebar-color-1: var(--scalar-color-1);
+        --scalar-sidebar-color-2: var(--scalar-color-2);
+        --scalar-sidebar-border-color: var(--scalar-border-color);
+        --scalar-sidebar-item-hover-background: var(--scalar-background-3);
+        --scalar-sidebar-item-hover-color: currentColor;
+        --scalar-sidebar-item-active-background: var(--scalar-background-1);
+        --scalar-sidebar-color-active: var(--scalar-color-1);
+        --scalar-sidebar-indent-border: var(--scalar-sidebar-border-color);
+        --scalar-sidebar-indent-border-hover: var(--scalar-sidebar-border-color);
+        --scalar-sidebar-indent-border-active: var(--scalar-color-accent);
+        --scalar-sidebar-search-background: var(--scalar-background-1);
+        --scalar-sidebar-search-color: var(--scalar-color-1);
+        --scalar-sidebar-search-border-color: var(--scalar-border-color);
+
+        /* Header */
+        --scalar-header-background-1: var(--scalar-background-1);
+        --scalar-header-border-color: var(--scalar-border-color);
+        --scalar-header-color-1: var(--scalar-color-1);
+        --scalar-header-color-2: var(--scalar-color-2);
+        --scalar-header-background-toggle: var(--scalar-background-3);
+        --scalar-header-call-to-action-color: var(--scalar-button-1-color);
       }
     `
   })
