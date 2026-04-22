@@ -1,286 +1,293 @@
 // src/schemas/evm.ts
 
-import { z } from 'zod';
+import { Schema } from 'effect';
 import { paginationQuerySchema, warningSchema } from './common';
 
+// Boolean coercion helper for query string params ("true"/"false" → boolean)
+const BooleanFromString = Schema.transform(
+  Schema.String,
+  Schema.Boolean,
+  { strict: true, decode: (s) => s === 'true', encode: (b) => String(b) }
+);
+
 // EVM address validation
-export const evmAddressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid EVM address format');
+export const evmAddressSchema = Schema.String.pipe(
+  Schema.pattern(/^0x[a-fA-F0-9]{40}$/, { message: () => 'Invalid EVM address format' })
+);
 
 // Chain entry schema
-export const chainEntrySchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  supported_assets: z.array(z.string()).optional(),
-  tags: z.array(z.string()),
-  rpc_url: z.string().url().nullable().optional(),
-  explorer_url: z.string().url().nullable().optional(),
-  logo: z.string().url().nullable().optional()
+export const chainEntrySchema = Schema.Struct({
+  id: Schema.Number,
+  name: Schema.String,
+  supported_assets: Schema.optional(Schema.Array(Schema.String)),
+  tags: Schema.Array(Schema.String),
+  rpc_url: Schema.optional(Schema.NullOr(Schema.String)),
+  explorer_url: Schema.optional(Schema.NullOr(Schema.String)),
+  logo: Schema.optional(Schema.NullOr(Schema.String))
 });
 
-export const chainsResponseSchema = z.object({ chains: z.array(chainEntrySchema) });
-
-// Transaction schema - aligned with Dune Sim API
-export const transactionSchema = z.object({
-  address: z.string(),
-  block_hash: z.string(),
-  block_number: z.string(),
-  block_time: z.string(), // ISO timestamp
-  block_version: z.number().optional(),
-  chain: z.string(),
-  from: z.string(),
-  to: z.string().nullable().optional(),
-  data: z.string().optional(),
-  gas: z.string().optional(), // Added - gas limit in hex
-  gas_price: z.string().nullable().optional(),
-  gas_used: z.string().optional(), // Added - actual gas used in hex
-  hash: z.string(),
-  index: z.string().optional(),
-  max_fee_per_gas: z.string().nullable().optional(),
-  max_priority_fee_per_gas: z.string().nullable().optional(),
-  nonce: z.string().optional(),
-  transaction_type: z.string().optional(),
-  value: z.string().optional(),
-  // Additional fields that might be present
-  access_list: z.array(z.unknown()).optional(),
-  y_parity: z.string().optional(),
-  v: z.string().optional(),
-  r: z.string().optional(),
-  s: z.string().optional()
-}).passthrough(); // Allow additional fields from the API
+export const chainsResponseSchema = Schema.Struct({
+  chains: Schema.Array(chainEntrySchema)
+});
 
 // Dune API error structure
-export const duneErrorSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-  code: z.string().optional(),
-  details: z.record(z.string(), z.unknown()).optional()
-}).passthrough(); // Allow additional error fields
+export const duneErrorSchema = Schema.Struct({
+  error: Schema.String,
+  message: Schema.optional(Schema.String),
+  code: Schema.optional(Schema.String),
+  details: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Unknown }))
+});
+
+// Transaction schema - aligned with Dune Sim API
+export const transactionSchema = Schema.Struct({
+  address: Schema.String,
+  block_hash: Schema.String,
+  block_number: Schema.String,
+  block_time: Schema.String,
+  block_version: Schema.optional(Schema.Number),
+  chain: Schema.String,
+  from: Schema.String,
+  to: Schema.optional(Schema.NullOr(Schema.String)),
+  data: Schema.optional(Schema.String),
+  gas: Schema.optional(Schema.String),
+  gas_price: Schema.optional(Schema.NullOr(Schema.String)),
+  gas_used: Schema.optional(Schema.String),
+  hash: Schema.String,
+  index: Schema.optional(Schema.String),
+  max_fee_per_gas: Schema.optional(Schema.NullOr(Schema.String)),
+  max_priority_fee_per_gas: Schema.optional(Schema.NullOr(Schema.String)),
+  nonce: Schema.optional(Schema.String),
+  transaction_type: Schema.optional(Schema.String),
+  value: Schema.optional(Schema.String),
+  access_list: Schema.optional(Schema.Array(Schema.Unknown)),
+  y_parity: Schema.optional(Schema.String),
+  v: Schema.optional(Schema.String),
+  r: Schema.optional(Schema.String),
+  s: Schema.optional(Schema.String)
+});
 
 // Transactions response
-export const transactionsResponseSchema = z.object({
-  wallet_address: z.string(),
-  transactions: z.array(transactionSchema),
-  errors: z.union([duneErrorSchema, z.array(duneErrorSchema), z.null()]).optional(),
-  warnings: z.array(warningSchema).optional(),
-  next_offset: z.string().nullable().optional(),
-  request_time: z.string().datetime().nullable().optional(),
-  response_time: z.string().datetime().nullable().optional()
-}).passthrough();
+export const transactionsResponseSchema = Schema.Struct({
+  wallet_address: Schema.String,
+  transactions: Schema.Array(transactionSchema),
+  errors: Schema.optional(Schema.NullOr(Schema.Union(duneErrorSchema, Schema.Array(duneErrorSchema)))),
+  warnings: Schema.optional(Schema.Array(warningSchema)),
+  next_offset: Schema.optional(Schema.NullOr(Schema.String)),
+  request_time: Schema.optional(Schema.NullOr(Schema.String)),
+  response_time: Schema.optional(Schema.NullOr(Schema.String))
+});
 
 // Balance data schema
-export const balanceDataSchema = z.object({
-  address: z.string(), // Token contract address or "native"
-  amount: z.string(), // Raw amount in smallest unit
-  chain: z.string(),
-  chain_id: z.number().optional(),
-  decimals: z.number().nullable().optional(),
-  low_liquidity: z.boolean().optional(),
-  name: z.string().nullable().optional(),
-  pool_size: z.number().nullable().optional(),
-  price_usd: z.number().nullable().optional(),
-  symbol: z.string().nullable().optional(),
-  token_metadata: z.object({
-    logo: z.string().url().nullable().optional(),
-    url: z.string().url().nullable().optional(),
-    // Additional metadata fields
-    description: z.string().nullable().optional(),
-    social: z.record(z.string(), z.string().url()).optional()
-  }).nullable().optional(),
-  value_usd: z.number().nullable().optional(),
-  // Additional balance fields
-  last_transfer_timestamp: z.string().datetime().nullable().optional(),
-  spam_score: z.number().min(0).max(1).nullable().optional()
-}).passthrough();
+export const balanceDataSchema = Schema.Struct({
+  address: Schema.String,
+  amount: Schema.String,
+  chain: Schema.String,
+  chain_id: Schema.optional(Schema.Number),
+  decimals: Schema.optional(Schema.NullOr(Schema.Number)),
+  low_liquidity: Schema.optional(Schema.Boolean),
+  name: Schema.optional(Schema.NullOr(Schema.String)),
+  pool_size: Schema.optional(Schema.NullOr(Schema.Number)),
+  price_usd: Schema.optional(Schema.NullOr(Schema.Number)),
+  symbol: Schema.optional(Schema.NullOr(Schema.String)),
+  token_metadata: Schema.optional(Schema.NullOr(Schema.Struct({
+    logo: Schema.optional(Schema.NullOr(Schema.String)),
+    url: Schema.optional(Schema.NullOr(Schema.String)),
+    description: Schema.optional(Schema.NullOr(Schema.String)),
+    social: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String }))
+  }))),
+  value_usd: Schema.optional(Schema.NullOr(Schema.Number)),
+  last_transfer_timestamp: Schema.optional(Schema.NullOr(Schema.String)),
+  spam_score: Schema.optional(Schema.NullOr(Schema.Number.pipe(Schema.between(0, 1))))
+});
 
 // Balances response
-export const balancesResponseSchema = z.object({
-  wallet_address: z.string(),
-  balances: z.array(balanceDataSchema),
-  errors: z.union([duneErrorSchema, z.array(duneErrorSchema), z.null()]).optional(),
-  warnings: z.array(warningSchema).optional(),
-  next_offset: z.string().optional(), // Not nullable according to API
-  request_time: z.string().datetime().nullable().optional(),
-  response_time: z.string().datetime().nullable().optional(),
-  // Additional response metadata
-  total_usd_value: z.number().nullable().optional(),
-  chain_count: z.number().optional()
-}).passthrough();
+export const balancesResponseSchema = Schema.Struct({
+  wallet_address: Schema.String,
+  balances: Schema.Array(balanceDataSchema),
+  errors: Schema.optional(Schema.NullOr(Schema.Union(duneErrorSchema, Schema.Array(duneErrorSchema)))),
+  warnings: Schema.optional(Schema.Array(warningSchema)),
+  next_offset: Schema.optional(Schema.String),
+  request_time: Schema.optional(Schema.NullOr(Schema.String)),
+  response_time: Schema.optional(Schema.NullOr(Schema.String)),
+  total_usd_value: Schema.optional(Schema.NullOr(Schema.Number)),
+  chain_count: Schema.optional(Schema.Number)
+});
 
-export const activityTypeSchema = z.enum(['send', 'receive', 'mint', 'burn', 'swap', 'approve', 'call']);
-export const assetTypeSchema = z.enum(['native', 'erc20', 'erc721', 'erc1155']);
+export const activityTypeSchema = Schema.Literal('send', 'receive', 'mint', 'burn', 'swap', 'approve', 'call');
+export const assetTypeSchema = Schema.Literal('native', 'erc20', 'erc721', 'erc1155');
 
-export const activityItemSchema = z.object({
-  chain_id: z.number().optional(),
-  block_number: z.number().optional(),
-  block_time: z.string(),
-  tx_hash: z.string().optional(),
-  transaction_hash: z.string().optional(),
+export const activityItemSchema = Schema.Struct({
+  chain_id: Schema.optional(Schema.Number),
+  block_number: Schema.optional(Schema.Number),
+  block_time: Schema.String,
+  tx_hash: Schema.optional(Schema.String),
+  transaction_hash: Schema.optional(Schema.String),
   type: activityTypeSchema,
-  asset_type: assetTypeSchema.optional(),
-  token_address: z.string().nullable().optional(),
-  token_id: z.string().nullable().optional(),
-  from: z.string().nullable().optional(),
-  to: z.string().nullable().optional(),
-  value: z.string().optional(),
-  value_usd: z.number().nullable().optional(),
-  function: z.object({ name: z.string().optional(), signature: z.string().optional() }).partial().optional(),
-  token_metadata: z.object({
-    symbol: z.string().nullable().optional(),
-    decimals: z.number().nullable().optional(),
-    price_usd: z.number().nullable().optional(),
-    logo: z.string().url().nullable().optional()
-  }).passthrough().nullable().optional()
-}).passthrough();
+  asset_type: Schema.optional(assetTypeSchema),
+  token_address: Schema.optional(Schema.NullOr(Schema.String)),
+  token_id: Schema.optional(Schema.NullOr(Schema.String)),
+  from: Schema.optional(Schema.NullOr(Schema.String)),
+  to: Schema.optional(Schema.NullOr(Schema.String)),
+  value: Schema.optional(Schema.String),
+  value_usd: Schema.optional(Schema.NullOr(Schema.Number)),
+  function: Schema.optional(Schema.Struct({
+    name: Schema.optional(Schema.String),
+    signature: Schema.optional(Schema.String)
+  })),
+  token_metadata: Schema.optional(Schema.NullOr(Schema.Struct({
+    symbol: Schema.optional(Schema.NullOr(Schema.String)),
+    decimals: Schema.optional(Schema.NullOr(Schema.Number)),
+    price_usd: Schema.optional(Schema.NullOr(Schema.Number)),
+    logo: Schema.optional(Schema.NullOr(Schema.String))
+  })))
+});
 
-export const activityResponseSchema = z.object({
-  activity: z.array(activityItemSchema),
-  warnings: z.array(warningSchema).optional(),
-  next_offset: z.string().nullable().optional(),
-  request_time: z.string().datetime().nullable().optional(),
-  response_time: z.string().datetime().nullable().optional()
-}).passthrough();
+export const activityResponseSchema = Schema.Struct({
+  activity: Schema.Array(activityItemSchema),
+  warnings: Schema.optional(Schema.Array(warningSchema)),
+  next_offset: Schema.optional(Schema.NullOr(Schema.String)),
+  request_time: Schema.optional(Schema.NullOr(Schema.String)),
+  response_time: Schema.optional(Schema.NullOr(Schema.String))
+});
 
-export const collectibleEntrySchema = z.object({
-  contract_address: z.string(),
-  token_standard: z.enum(['ERC721', 'ERC1155']).optional(),
-  token_id: z.string(),
-  chain: z.string().optional(),
-  chain_id: z.number().optional(),
-  balance: z.string().optional(),
-  is_spam: z.boolean().optional()
-}).passthrough();
+export const collectibleEntrySchema = Schema.Struct({
+  contract_address: Schema.String,
+  token_standard: Schema.optional(Schema.Literal('ERC721', 'ERC1155')),
+  token_id: Schema.String,
+  chain: Schema.optional(Schema.String),
+  chain_id: Schema.optional(Schema.Number),
+  balance: Schema.optional(Schema.String),
+  is_spam: Schema.optional(Schema.Boolean)
+});
 
-export const collectiblesResponseSchema = z.object({
-  address: z.string(),
-  entries: z.array(collectibleEntrySchema),
-  warnings: z.array(warningSchema).optional(),
-  next_offset: z.string().optional(),
-  request_time: z.string().datetime().optional(),
-  response_time: z.string().datetime().optional()
-}).passthrough();
+export const collectiblesResponseSchema = Schema.Struct({
+  address: Schema.String,
+  entries: Schema.Array(collectibleEntrySchema),
+  warnings: Schema.optional(Schema.Array(warningSchema)),
+  next_offset: Schema.optional(Schema.String),
+  request_time: Schema.optional(Schema.String),
+  response_time: Schema.optional(Schema.String)
+});
 
-export const tokenInfoItemSchema = z.object({
-  chain: z.string().optional(),
-  chain_id: z.number().optional(),
-  symbol: z.string().optional(),
-  name: z.string().optional(),
-  decimals: z.number().optional(),
-  price_usd: z.number().nullable().optional(),
-  logo: z.string().nullable().optional()
-}).passthrough();
+export const tokenInfoItemSchema = Schema.Struct({
+  chain: Schema.optional(Schema.String),
+  chain_id: Schema.optional(Schema.Number),
+  symbol: Schema.optional(Schema.String),
+  name: Schema.optional(Schema.String),
+  decimals: Schema.optional(Schema.Number),
+  price_usd: Schema.optional(Schema.NullOr(Schema.Number)),
+  logo: Schema.optional(Schema.NullOr(Schema.String))
+});
 
-export const tokenInfoResponseSchema = z.object({
-  contract_address: z.string(),
-  tokens: z.array(tokenInfoItemSchema),
-  warnings: z.array(warningSchema).optional(),
-  next_offset: z.string().optional()
-}).passthrough();
+export const tokenInfoResponseSchema = Schema.Struct({
+  contract_address: Schema.String,
+  tokens: Schema.Array(tokenInfoItemSchema),
+  warnings: Schema.optional(Schema.Array(warningSchema)),
+  next_offset: Schema.optional(Schema.String)
+});
 
-export const tokenHolderSchema = z.object({
-  wallet_address: z.string(),
-  balance: z.string(),
-  first_acquired: z.string().optional(),
-  has_initiated_transfer: z.boolean().optional()
-}).passthrough();
+export const tokenHolderSchema = Schema.Struct({
+  wallet_address: Schema.String,
+  balance: Schema.String,
+  first_acquired: Schema.optional(Schema.String),
+  has_initiated_transfer: Schema.optional(Schema.Boolean)
+});
 
-export const tokenHoldersResponseSchema = z.object({
-  token_address: z.string(),
-  chain_id: z.number(),
-  holders: z.array(tokenHolderSchema),
-  next_offset: z.string().optional()
-}).passthrough();
+export const tokenHoldersResponseSchema = Schema.Struct({
+  token_address: Schema.String,
+  chain_id: Schema.Number,
+  holders: Schema.Array(tokenHolderSchema),
+  next_offset: Schema.optional(Schema.String)
+});
 
-export const defiPositionsResponseSchema = z.object({
-  positions: z.array(
-    z.object({ type: z.string(), chain_id: z.number().optional(), usd_value: z.number().nullable().optional() })
-      .passthrough()
-  ),
-  aggregations: z.object({
-    total_usd_value: z.number().optional(),
-    total_by_chain: z.record(z.string(), z.number()).optional()
-  }).passthrough().optional(),
-  warnings: z.array(warningSchema).optional()
-}).passthrough();
+export const defiPositionsResponseSchema = Schema.Struct({
+  positions: Schema.Array(Schema.Struct({
+    type: Schema.String,
+    chain_id: Schema.optional(Schema.Number),
+    usd_value: Schema.optional(Schema.NullOr(Schema.Number))
+  })),
+  aggregations: Schema.optional(Schema.Struct({
+    total_usd_value: Schema.optional(Schema.Number),
+    total_by_chain: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Number }))
+  })),
+  warnings: Schema.optional(Schema.Array(warningSchema))
+});
 
-export const stablecoinsResponseSchema = z.object({
-  wallet_address: z.string(),
-  balances: z.array(balanceDataSchema),
-  errors: z.union([duneErrorSchema, z.array(duneErrorSchema), z.null()]).optional(),
-  warnings: z.array(warningSchema).optional(),
-  next_offset: z.string().optional(),
-  request_time: z.string().datetime().nullable().optional(),
-  response_time: z.string().datetime().nullable().optional()
-}).passthrough();
+export const stablecoinsResponseSchema = Schema.Struct({
+  wallet_address: Schema.String,
+  balances: Schema.Array(balanceDataSchema),
+  errors: Schema.optional(Schema.NullOr(Schema.Union(duneErrorSchema, Schema.Array(duneErrorSchema)))),
+  warnings: Schema.optional(Schema.Array(warningSchema)),
+  next_offset: Schema.optional(Schema.String),
+  request_time: Schema.optional(Schema.NullOr(Schema.String)),
+  response_time: Schema.optional(Schema.NullOr(Schema.String))
+});
 
 // Query schemas
-export const evmTransactionsQuerySchema = paginationQuerySchema.extend({
-  chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags').refine((val) =>
-    !val || val.split(',').every(id => id.trim().length > 0), 'Chain IDs must not be empty')
+export const evmTransactionsQuerySchema = Schema.Struct({
+  ...paginationQuerySchema.fields,
+  chain_ids: Schema.optional(Schema.String)
 });
 
-export const evmBalancesQuerySchema = paginationQuerySchema.extend({
-  chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags'),
-  filters: z.enum(['erc20', 'native']).optional().describe('Filter by token type'),
-  exclude_spam_tokens: z.coerce.boolean().optional().describe('Exclude low-liquidity spam tokens'),
-  historical_prices: z.string().optional().describe(
-    'Comma-separated hour offsets for historical prices (max 3 values)'
+export const evmBalancesQuerySchema = Schema.Struct({
+  ...paginationQuerySchema.fields,
+  chain_ids: Schema.optional(Schema.String),
+  filters: Schema.optional(Schema.Literal('erc20', 'native')),
+  exclude_spam_tokens: Schema.optional(BooleanFromString),
+  historical_prices: Schema.optional(Schema.String),
+  metadata: Schema.optional(Schema.String)
+});
+
+export const evmActivityQuerySchema = Schema.Struct({
+  ...paginationQuerySchema.fields,
+  chain_ids: Schema.optional(Schema.String),
+  token_address: Schema.optional(Schema.String),
+  activity_type: Schema.optional(Schema.String),
+  asset_type: Schema.optional(Schema.String)
+});
+
+export const evmCollectiblesQuerySchema = Schema.Struct({
+  ...paginationQuerySchema.fields,
+  chain_ids: Schema.optional(Schema.String),
+  filter_spam: Schema.optional(BooleanFromString),
+  show_spam_scores: Schema.optional(BooleanFromString)
+});
+
+export const evmStablecoinsQuerySchema = Schema.Struct({
+  ...paginationQuerySchema.fields,
+  chain_ids: Schema.optional(Schema.String),
+  filters: Schema.optional(Schema.Literal('erc20', 'native')),
+  metadata: Schema.optional(Schema.String),
+  exclude_spam_tokens: Schema.optional(BooleanFromString),
+  historical_prices: Schema.optional(Schema.String)
+});
+
+export const evmTokenInfoQuerySchema = Schema.Struct({
+  ...paginationQuerySchema.fields,
+  chain_ids: Schema.String.pipe(Schema.minLength(1, { message: () => 'Exactly one chain ID is required by upstream' })),
+  historical_prices: Schema.optional(Schema.String)
+});
+
+export const evmTokenHoldersQuerySchema = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.pipe(Schema.filter(n => n >= 1 && n <= 500, { message: () => 'limit must be between 1 and 500' }))
   ),
-  metadata: z.string().optional().describe('Additional metadata fields to include (comma-separated)').refine(
-    (val) => !val || val.split(',').every(field => field.trim().length > 0),
-    'Metadata fields must not be empty'
-  )
+  offset: Schema.optional(Schema.String)
 });
 
-export const evmActivityQuerySchema = paginationQuerySchema.extend({
-  chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags'),
-  token_address: z.string().optional().describe('Single or comma-separated token addresses'),
-  activity_type: z.string().optional().describe(
-    'Single or comma-separated values of send,receive,mint,burn,swap,approve,call'
-  ),
-  asset_type: z.string().optional().describe('Single or comma-separated values of native,erc20,erc721,erc1155')
-});
-
-export const evmCollectiblesQuerySchema = paginationQuerySchema.extend({
-  chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags'),
-  filter_spam: z.coerce.boolean().optional().describe('Hide spam collectibles when true'),
-  show_spam_scores: z.coerce.boolean().optional().describe('Include spam scoring metadata')
-});
-
-export const evmStablecoinsQuerySchema = paginationQuerySchema.extend({
-  chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags'),
-  filters: z.enum(['erc20', 'native']).optional().describe('Filter by token type'),
-  metadata: z.string().optional().describe('Additional metadata fields to include (comma-separated)'),
-  exclude_spam_tokens: z.coerce.boolean().optional().describe('Exclude low-liquidity spam tokens'),
-  historical_prices: z.string().optional().describe(
-    'Comma-separated hour offsets for historical prices (max 3 values)'
-  )
-});
-
-export const evmTokenInfoQuerySchema = paginationQuerySchema.extend({
-  chain_ids: z.string().min(1).describe('Exactly one chain ID is required by upstream'),
-  historical_prices: z.string().optional().describe(
-    'Comma-separated hour offsets for historical prices (max 3 values)'
-  )
-});
-
-export const evmTokenHoldersQuerySchema = z.object({
-  limit: z.coerce.number().min(1).max(500).optional(),
-  offset: z.string().optional()
-});
-
-export const evmDefiPositionsQuerySchema = z.object({
-  chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags')
+export const evmDefiPositionsQuerySchema = Schema.Struct({
+  chain_ids: Schema.optional(Schema.String)
 });
 
 // Type exports for TypeScript usage
-export type ChainEntry = z.infer<typeof chainEntrySchema>;
-export type Transaction = z.infer<typeof transactionSchema>;
-export type BalanceData = z.infer<typeof balanceDataSchema>;
-export type TransactionsResponse = z.infer<typeof transactionsResponseSchema>;
-export type BalancesResponse = z.infer<typeof balancesResponseSchema>;
-export type ActivityResponse = z.infer<typeof activityResponseSchema>;
-export type CollectiblesResponse = z.infer<typeof collectiblesResponseSchema>;
-export type TokenInfoResponse = z.infer<typeof tokenInfoResponseSchema>;
-export type TokenHoldersResponse = z.infer<typeof tokenHoldersResponseSchema>;
-export type DefiPositionsResponse = z.infer<typeof defiPositionsResponseSchema>;
-export type StablecoinsResponse = z.infer<typeof stablecoinsResponseSchema>;
+export type ChainEntry = Schema.Schema.Type<typeof chainEntrySchema>;
+export type Transaction = Schema.Schema.Type<typeof transactionSchema>;
+export type BalanceData = Schema.Schema.Type<typeof balanceDataSchema>;
+export type TransactionsResponse = Schema.Schema.Type<typeof transactionsResponseSchema>;
+export type BalancesResponse = Schema.Schema.Type<typeof balancesResponseSchema>;
+export type ActivityResponse = Schema.Schema.Type<typeof activityResponseSchema>;
+export type CollectiblesResponse = Schema.Schema.Type<typeof collectiblesResponseSchema>;
+export type TokenInfoResponse = Schema.Schema.Type<typeof tokenInfoResponseSchema>;
+export type TokenHoldersResponse = Schema.Schema.Type<typeof tokenHoldersResponseSchema>;
+export type DefiPositionsResponse = Schema.Schema.Type<typeof defiPositionsResponseSchema>;
+export type StablecoinsResponse = Schema.Schema.Type<typeof stablecoinsResponseSchema>;

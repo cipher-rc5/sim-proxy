@@ -1,9 +1,9 @@
 // src/schemas/system.ts
 
-import { z } from 'zod';
+import { Schema } from 'effect';
 
-export const healthSchema = z.object({
-  status: z.literal('healthy'),
-  timestamp: z.string().datetime(),
-  version: z.string()
+export const healthSchema = Schema.Struct({
+  status: Schema.Literal('healthy'),
+  timestamp: Schema.String,
+  version: Schema.String
 });

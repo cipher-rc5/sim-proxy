@@ -1,19 +1,19 @@
 // src/routes/svm.ts
 
-import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { z } from 'zod';
+import { Schema } from 'effect';
 import { svmAddressSchema, svmBalancesResponseSchema, svmQuerySchema, svmTransactionsResponseSchema } from '../schemas/svm';
 import type { Variables } from '../types';
 import { proxyRequest } from '../utils/proxy';
+import { schemaValidator } from '../utils/schema-validator';
 
 export const svmRoutes = new Hono<{ Variables: Variables }>();
 
 // SVM Transactions
 svmRoutes.get(
   '/transactions/:address',
-  zValidator('param', z.object({ address: svmAddressSchema })),
-  zValidator('query', svmQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: svmAddressSchema })),
+  schemaValidator('query', svmQuerySchema),
   async (c) => {
     const { address } = c.req.valid('param');
     const query = c.req.valid('query');
@@ -29,8 +29,8 @@ svmRoutes.get(
 // SVM Balances
 svmRoutes.get(
   '/balances/:address',
-  zValidator('param', z.object({ address: svmAddressSchema })),
-  zValidator('query', svmQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: svmAddressSchema })),
+  schemaValidator('query', svmQuerySchema),
   async (c) => {
     const { address } = c.req.valid('param');
     const query = c.req.valid('query');

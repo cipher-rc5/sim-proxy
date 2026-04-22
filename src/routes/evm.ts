@@ -1,13 +1,35 @@
 // src/routes/evm.ts
 
-import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { z } from 'zod';
-import { type ActivityResponse, activityResponseSchema, type BalancesResponse, balancesResponseSchema, chainsResponseSchema, collectiblesResponseSchema, defiPositionsResponseSchema, evmActivityQuerySchema, evmAddressSchema, evmBalancesQuerySchema, evmCollectiblesQuerySchema, evmDefiPositionsQuerySchema, evmStablecoinsQuerySchema, evmTokenHoldersQuerySchema, evmTokenInfoQuerySchema, evmTransactionsQuerySchema, stablecoinsResponseSchema, tokenHoldersResponseSchema, tokenInfoResponseSchema, type TransactionsResponse, transactionsResponseSchema } from '../schemas/evm';
+import { Schema } from 'effect';
+import {
+  type ActivityResponse,
+  activityResponseSchema,
+  type BalancesResponse,
+  balancesResponseSchema,
+  chainsResponseSchema,
+  collectiblesResponseSchema,
+  defiPositionsResponseSchema,
+  evmActivityQuerySchema,
+  evmAddressSchema,
+  evmBalancesQuerySchema,
+  evmCollectiblesQuerySchema,
+  evmDefiPositionsQuerySchema,
+  evmStablecoinsQuerySchema,
+  evmTokenHoldersQuerySchema,
+  evmTokenInfoQuerySchema,
+  evmTransactionsQuerySchema,
+  stablecoinsResponseSchema,
+  tokenHoldersResponseSchema,
+  tokenInfoResponseSchema,
+  type TransactionsResponse,
+  transactionsResponseSchema
+} from '../schemas/evm';
 import type { Variables } from '../types';
 import { createLogger } from '../utils/logger';
 import { proxyRequest } from '../utils/proxy';
+import { schemaValidator } from '../utils/schema-validator';
 
 export const evmRoutes = new Hono<{ Variables: Variables }>();
 
@@ -26,9 +48,14 @@ evmRoutes.get('/supported-chains/:uri/:extra', (c) => {
 // Supported Chains endpoint
 evmRoutes.get(
   '/supported-chains/:uri',
-  zValidator(
+  schemaValidator(
     'param',
-    z.object({ uri: z.string().min(1, 'URI parameter is required').regex(/^[a-z\-]+$/, 'Invalid URI format') })
+    Schema.Struct({
+      uri: Schema.String.pipe(
+        Schema.minLength(1, { message: () => 'URI parameter is required' }),
+        Schema.pattern(/^[a-z\-]+$/, { message: () => 'Invalid URI format' })
+      )
+    })
   ),
   async (c) => {
     const logger = createLogger(c);
@@ -36,7 +63,6 @@ evmRoutes.get(
 
     logger.info('Fetching supported chains', { uri });
 
-    // Validate known URIs
     const knownUris = ['balances', 'transactions', 'activity', 'collectibles', 'stablecoins', 'defi-positions'];
     if (!knownUris.includes(uri)) {
       logger.warn('Unknown URI requested', { uri, knownUris });
@@ -54,8 +80,8 @@ evmRoutes.get(
 // Collectibles endpoint
 evmRoutes.get(
   '/collectibles/:address',
-  zValidator('param', z.object({ address: evmAddressSchema })),
-  zValidator('query', evmCollectiblesQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: evmAddressSchema })),
+  schemaValidator('query', evmCollectiblesQuerySchema),
   async (c) => {
     const logger = createLogger(c);
     const { address: rawAddress } = c.req.valid('param');
@@ -85,8 +111,8 @@ evmRoutes.get(
 // Stablecoins endpoint
 evmRoutes.get(
   '/stablecoins/:address',
-  zValidator('param', z.object({ address: evmAddressSchema })),
-  zValidator('query', evmStablecoinsQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: evmAddressSchema })),
+  schemaValidator('query', evmStablecoinsQuerySchema),
   async (c) => {
     const { address: rawAddress } = c.req.valid('param');
     const address = rawAddress.toLowerCase();
@@ -96,10 +122,9 @@ evmRoutes.get(
     if (query.chain_ids) queryParams.set('chain_ids', query.chain_ids);
     if (query.filters) queryParams.set('filters', query.filters);
     if (query.metadata) queryParams.set('metadata', query.metadata);
-    if (query.exclude_spam_tokens !== undefined) {queryParams.set(
-        'exclude_spam_tokens',
-        String(query.exclude_spam_tokens)
-      );}
+    if (query.exclude_spam_tokens !== undefined) {
+      queryParams.set('exclude_spam_tokens', String(query.exclude_spam_tokens));
+    }
     if (query.historical_prices) queryParams.set('historical_prices', query.historical_prices);
     if (query.limit !== undefined) queryParams.set('limit', query.limit.toString());
     if (query.offset) queryParams.set('offset', query.offset);
@@ -111,8 +136,8 @@ evmRoutes.get(
 // Token info endpoint
 evmRoutes.get(
   '/token-info/:address',
-  zValidator('param', z.object({ address: z.string().min(1) })),
-  zValidator('query', evmTokenInfoQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: Schema.String.pipe(Schema.minLength(1)) })),
+  schemaValidator('query', evmTokenInfoQuerySchema),
   async (c) => {
     const { address } = c.req.valid('param');
     const normalizedAddress = address.toLowerCase() === 'native' ? 'native' : address.toLowerCase();
@@ -131,8 +156,11 @@ evmRoutes.get(
 // Token holders endpoint
 evmRoutes.get(
   '/token-holders/:chain_id/:address',
-  zValidator('param', z.object({ chain_id: z.coerce.number().int().positive(), address: evmAddressSchema })),
-  zValidator('query', evmTokenHoldersQuerySchema),
+  schemaValidator('param', Schema.Struct({
+    chain_id: Schema.NumberFromString.pipe(Schema.int(), Schema.positive()),
+    address: evmAddressSchema
+  })),
+  schemaValidator('query', evmTokenHoldersQuerySchema),
   async (c) => {
     const { chain_id, address } = c.req.valid('param');
     const query = c.req.valid('query');
@@ -153,8 +181,8 @@ evmRoutes.get(
 // DeFi positions endpoint (upstream beta path)
 evmRoutes.get(
   '/defi-positions/:address',
-  zValidator('param', z.object({ address: evmAddressSchema })),
-  zValidator('query', evmDefiPositionsQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: evmAddressSchema })),
+  schemaValidator('query', evmDefiPositionsQuerySchema),
   async (c) => {
     const { address: rawAddress } = c.req.valid('param');
     const address = rawAddress.toLowerCase();
@@ -170,8 +198,8 @@ evmRoutes.get(
 // Transactions endpoint
 evmRoutes.get(
   '/transactions/:address',
-  zValidator('param', z.object({ address: evmAddressSchema })),
-  zValidator('query', evmTransactionsQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: evmAddressSchema })),
+  schemaValidator('query', evmTransactionsQuerySchema),
   async (c) => {
     const logger = createLogger(c);
     const { address: rawAddress } = c.req.valid('param');
@@ -179,17 +207,15 @@ evmRoutes.get(
     const query = c.req.valid('query');
 
     logger.info('Fetching EVM transactions', {
-      address: address.substring(0, 10) + '...', // Log partial address
+      address: address.substring(0, 10) + '...',
       hasChainIds: !!query.chain_ids,
       limit: query.limit,
       hasOffset: !!query.offset
     });
 
-    // Build query parameters
     const queryParams = new URLSearchParams();
 
     if (query.chain_ids) {
-      // Validate chain IDs format
       const chainIds = query.chain_ids.split(',').map(id => id.trim());
       if (chainIds.some(id => !id)) {
         throw new HTTPException(400, { message: 'Invalid chain_ids format' });
@@ -197,13 +223,8 @@ evmRoutes.get(
       queryParams.set('chain_ids', chainIds.join(','));
     }
 
-    if (query.limit !== undefined) {
-      queryParams.set('limit', query.limit.toString());
-    }
-
-    if (query.offset) {
-      queryParams.set('offset', query.offset);
-    }
+    if (query.limit !== undefined) queryParams.set('limit', query.limit.toString());
+    if (query.offset) queryParams.set('offset', query.offset);
 
     try {
       const response = await proxyRequest(
@@ -213,7 +234,6 @@ evmRoutes.get(
         queryParams
       );
 
-      // Log success metrics
       const data = await response.clone().json() as TransactionsResponse;
       logger.info('Transactions fetched successfully', {
         address: address.substring(0, 10) + '...',
@@ -232,8 +252,8 @@ evmRoutes.get(
 // Activity endpoint
 evmRoutes.get(
   '/activity/:address',
-  zValidator('param', z.object({ address: evmAddressSchema })),
-  zValidator('query', evmActivityQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: evmAddressSchema })),
+  schemaValidator('query', evmActivityQuerySchema),
   async (c) => {
     const logger = createLogger(c);
     const { address: rawAddress } = c.req.valid('param');
@@ -280,8 +300,8 @@ evmRoutes.get(
 // Balances endpoint
 evmRoutes.get(
   '/balances/:address',
-  zValidator('param', z.object({ address: evmAddressSchema })),
-  zValidator('query', evmBalancesQuerySchema),
+  schemaValidator('param', Schema.Struct({ address: evmAddressSchema })),
+  schemaValidator('query', evmBalancesQuerySchema),
   async (c) => {
     const logger = createLogger(c);
     const { address: rawAddress } = c.req.valid('param');
@@ -296,7 +316,6 @@ evmRoutes.get(
       limit: query.limit
     });
 
-    // Build query parameters
     const queryParams = new URLSearchParams();
 
     if (query.chain_ids) {
@@ -307,20 +326,13 @@ evmRoutes.get(
       queryParams.set('chain_ids', chainIds.join(','));
     }
 
-    if (query.filters) {
-      queryParams.set('filters', query.filters);
-    }
-
+    if (query.filters) queryParams.set('filters', query.filters);
     if (query.exclude_spam_tokens !== undefined) {
       queryParams.set('exclude_spam_tokens', String(query.exclude_spam_tokens));
     }
-
-    if (query.historical_prices) {
-      queryParams.set('historical_prices', query.historical_prices);
-    }
+    if (query.historical_prices) queryParams.set('historical_prices', query.historical_prices);
 
     if (query.metadata) {
-      // Validate metadata fields
       const metadataFields = query.metadata.split(',').map(f => f.trim());
       const validFields = ['url', 'logo', 'description', 'social', 'pools'];
       const invalidFields = metadataFields.filter(f => !validFields.includes(f));
@@ -332,18 +344,12 @@ evmRoutes.get(
       queryParams.set('metadata', metadataFields.join(','));
     }
 
-    if (query.limit !== undefined) {
-      queryParams.set('limit', query.limit.toString());
-    }
-
-    if (query.offset) {
-      queryParams.set('offset', query.offset);
-    }
+    if (query.limit !== undefined) queryParams.set('limit', query.limit.toString());
+    if (query.offset) queryParams.set('offset', query.offset);
 
     try {
       const response = await proxyRequest(c, `/v1/evm/balances/${address}`, balancesResponseSchema, queryParams);
 
-      // Log success metrics
       const data = await response.clone().json() as BalancesResponse;
       logger.info('Balances fetched successfully', {
         address: address.substring(0, 10) + '...',

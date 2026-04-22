@@ -2,7 +2,6 @@
 
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { z } from 'zod';
 import { HEADERS } from '../config/constants';
 import type { ValidatedEnv } from '../config/env';
 import type { AppEnv } from '../types';
@@ -23,7 +22,6 @@ export const errorHandler = (err: Error, c: Context<AppEnv>): Response => {
   const isDevelopment = validatedEnv?.NODE_ENV === 'development';
   const requestId = c.get('requestId');
 
-  // Create error context
   const errorContext = {
     path: c.req.path,
     method: c.req.method,
@@ -32,13 +30,11 @@ export const errorHandler = (err: Error, c: Context<AppEnv>): Response => {
     clientIp: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For')
   };
 
-  // Log error with full context
   logger.error('Request failed', {
     error: serializeError(err, errorContext),
     status: err instanceof HTTPException ? err.status : 500
   });
 
-  // Handle different error types using createErrorResponse
   let status = 500;
   let response: ErrorResponse;
 
@@ -46,33 +42,11 @@ export const errorHandler = (err: Error, c: Context<AppEnv>): Response => {
     status = err.status;
     const errorResponse = createErrorResponse(err, errorContext, isDevelopment);
     response = { ...errorResponse, timestamp: new Date().toISOString() };
-  } else if (err instanceof z.ZodError) {
-    status = 400;
-    const formattedErrors = err.issues.map(e => ({
-      path: e.path.join('.'),
-      message: e.message,
-      code: e.code,
-      ...(isDevelopment && 'expected' in e ? { expected: e.expected } : {}),
-      ...(isDevelopment && 'received' in e ? { received: e.received } : {})
-    }));
-
-    // Use createErrorResponse for consistency
-    const errorResponse = createErrorResponse(new Error('Validation error'), errorContext, isDevelopment);
-
-    response = {
-      ...errorResponse,
-      details: isDevelopment ?
-        { errors: formattedErrors, errorCount: formattedErrors.length } :
-        'Invalid request format',
-      timestamp: new Date().toISOString()
-    };
   } else {
-    // Generic error handling using createErrorResponse
     const errorResponse = createErrorResponse(err, errorContext, isDevelopment);
     response = { ...errorResponse, timestamp: new Date().toISOString() };
   }
 
-  // Set security headers
   const headers = new Headers({
     [HEADERS.CONTENT_TYPE]: 'application/json',
     [HEADERS.CONTENT_TYPE_OPTIONS]: 'nosniff',
@@ -80,7 +54,6 @@ export const errorHandler = (err: Error, c: Context<AppEnv>): Response => {
     [HEADERS.REQUEST_ID]: requestId || ''
   });
 
-  // Add cache control for errors
   if (status >= 500) {
     headers.set(HEADERS.CACHE_CONTROL, 'no-store');
   } else {
@@ -106,7 +79,6 @@ export const notFoundHandler = (c: Context<AppEnv>): Response => {
 
   logger.warn('Route not found', errorContext);
 
-  // Use createErrorResponse for consistency
   const errorResponse = createErrorResponse(
     new Error(`Route ${c.req.method} ${c.req.path} not found`),
     errorContext,

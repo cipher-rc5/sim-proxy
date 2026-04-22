@@ -1,23 +1,29 @@
 // src/schemas/common.ts
 
-import { z } from 'zod';
+import { Schema } from 'effect';
 
-export const errorSchema = z.object({
-  error: z.string(),
-  details: z.union([z.string(), z.record(z.string(), z.unknown()), z.array(z.unknown())]).optional(),
-  requestId: z.string().optional()
+export const errorSchema = Schema.Struct({
+  error: Schema.String,
+  details: Schema.optional(Schema.Union(
+    Schema.String,
+    Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+    Schema.Array(Schema.Unknown)
+  )),
+  requestId: Schema.optional(Schema.String)
 });
 
-export const warningSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  chain_ids: z.array(z.number()).optional(),
-  docs_url: z.string().url().optional()
-}).passthrough();
+export const warningSchema = Schema.Struct({
+  code: Schema.String,
+  message: Schema.String,
+  chain_ids: Schema.optional(Schema.Array(Schema.Number)),
+  docs_url: Schema.optional(Schema.String)
+});
 
-export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().min(1).max(1000).optional(),
-  offset: z.string().optional()
+export const paginationQuerySchema = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.pipe(Schema.filter(n => n >= 1 && n <= 1000, { message: () => 'limit must be between 1 and 1000' }))
+  ),
+  offset: Schema.optional(Schema.String)
 });
 
 // Define types instead of using any

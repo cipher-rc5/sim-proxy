@@ -1,40 +1,40 @@
 // src/config/env.ts
 
-import { z } from 'zod';
+import { Schema } from 'effect';
 
-// Base environment schema
-const baseEnvSchema = z.object({
-  DUNE_SIM_API_KEY: z.string().min(1, 'DUNE_SIM_API_KEY is required').regex(
-    /^[A-Za-z0-9+/\-_]+=*$/,
-    'Invalid API key format'
+const apiKeyPattern = /^[A-Za-z0-9+/\-_]+=*$/;
+
+export const envSchema = Schema.Struct({
+  DUNE_SIM_API_KEY: Schema.String.pipe(
+    Schema.minLength(1, { message: () => 'DUNE_SIM_API_KEY is required' }),
+    Schema.pattern(apiKeyPattern, { message: () => 'Invalid API key format' })
   ),
-  WORKER_API_KEY: z.string().min(32, 'WORKER_API_KEY must be at least 32 characters').regex(
-    /^[A-Za-z0-9+/\-_]+=*$/,
-    'Invalid API key format'
+  WORKER_API_KEY: Schema.String.pipe(
+    Schema.minLength(32, { message: () => 'WORKER_API_KEY must be at least 32 characters' }),
+    Schema.pattern(apiKeyPattern, { message: () => 'Invalid API key format' })
   ),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
-  ALLOWED_ORIGINS: z.string().optional().transform((val) => {
-    // Transform comma-separated string to array and validate each origin
-    if (!val) return undefined;
-    const origins = val.split(',').map(o => o.trim()).filter(Boolean);
-    origins.forEach(origin => {
-      if (origin !== '*' && !origin.match(/^https?:\/\/.+/)) {
-        throw new Error(`Invalid origin format: ${origin}`);
-      }
-    });
-    return val;
-  })
+  NODE_ENV: Schema.optionalWith(
+    Schema.Literal('development', 'production', 'test'),
+    { default: () => 'production' as const }
+  ),
+  ALLOWED_ORIGINS: Schema.optional(
+    Schema.String.pipe(
+      Schema.filter(
+        (val) => {
+          const origins = val.split(',').map(o => o.trim()).filter(Boolean);
+          return origins.every(o => o === '*' || /^https?:\/\/.+/.test(o));
+        },
+        { message: () => 'Invalid origin format: each origin must be "*" or start with http:// or https://' }
+      )
+    )
+  )
 });
 
-// Export the schema for environment validation
-export const envSchema = baseEnvSchema;
-
 // Type for the validated environment
-export type ValidatedEnv = z.infer<typeof envSchema>;
+export type ValidatedEnv = Schema.Schema.Type<typeof envSchema>;
 
 // Additional runtime validations that depend on bindings
 export function validateRuntimeEnv(env: ValidatedEnv, bindings: { RATE_LIMITER?: unknown }): void {
-  // In production, rate limiter should be available
   if (env.NODE_ENV === 'production' && !bindings.RATE_LIMITER) {
     console.warn('[SECURITY WARNING] Rate limiter KV namespace not configured in production environment');
   }

@@ -1,7 +1,59 @@
 // src/types/errors.ts
 
+import { Data, ParseResult } from 'effect';
 import { HTTPException } from 'hono/http-exception';
-import { z } from 'zod';
+
+// ---------------------------------------------------------------------------
+// Effect tagged errors — typed error channel for the proxy pipeline
+// ---------------------------------------------------------------------------
+
+/** Network/timeout errors produced by fetch */
+export class FetchTimeoutError extends Data.TaggedError('FetchTimeoutError')<{
+  readonly url: string;
+  readonly timeoutMs: number;
+}> {}
+
+/** Any non-timeout network-level failure */
+export class FetchNetworkError extends Data.TaggedError('FetchNetworkError')<{
+  readonly url: string;
+  readonly cause: unknown;
+}> {}
+
+/** Upstream returned a response body that failed Effect Schema validation */
+export class UpstreamSchemaError extends Data.TaggedError('UpstreamSchemaError')<{
+  readonly message: string;
+  readonly preview: string;
+}> {}
+
+/** Upstream returned a non-JSON body (or unparseable JSON) */
+export class UpstreamParseError extends Data.TaggedError('UpstreamParseError')<{
+  readonly preview: string;
+}> {}
+
+/** Request or response body exceeded the configured size limit */
+export class BodyTooLargeError extends Data.TaggedError('BodyTooLargeError')<{
+  readonly size: number;
+  readonly limit: number;
+  readonly source: 'request' | 'response';
+}> {}
+
+/** Subrequest limit reached for this request lifecycle */
+export class SubrequestLimitError extends Data.TaggedError('SubrequestLimitError')<{
+  readonly limit: number;
+  readonly current: number;
+}> {}
+
+/** Union of all errors that can occur inside the proxy pipeline Effect */
+export type ProxyError =
+  | FetchTimeoutError
+  | FetchNetworkError
+  | UpstreamSchemaError
+  | UpstreamParseError
+  | BodyTooLargeError;
+
+// ---------------------------------------------------------------------------
+// Serialization helpers (used by logging infrastructure)
+// ---------------------------------------------------------------------------
 
 /**
  * Serializable error format for logging
@@ -13,7 +65,6 @@ export interface SerializedError {
   code?: string;
   cause?: unknown;
   status?: number;
-  zodErrors?: z.ZodIssue[];
   path?: string;
   method?: string;
   timestamp?: string;
@@ -30,18 +81,34 @@ export interface ErrorContext {
 }
 
 /**
- * Convert any error type to a serializable format
+ * Convert any error type to a serializable format for logging.
+ * Handles Effect tagged errors, ParseError, HTTPException, and plain Errors.
  */
 export function serializeError(error: unknown, context?: ErrorContext): SerializedError {
   const timestamp = new Date().toISOString();
 
-  // Handle Zod errors specially
-  if (error instanceof z.ZodError) {
+  // Handle Effect Schema ParseError
+  if (error instanceof ParseResult.ParseError) {
     return {
-      message: 'Validation failed',
-      name: 'ZodError',
-      zodErrors: error.issues,
+      message: error.message,
+      name: 'ParseError',
       stack: error.stack,
+      timestamp,
+      ...context
+    };
+  }
+
+  // Handle Effect tagged errors (Data.TaggedError subclasses have a _tag property)
+  if (
+    error instanceof Error &&
+    '_tag' in error &&
+    typeof (error as { _tag: unknown })._tag === 'string'
+  ) {
+    const tagged = error as Error & { _tag: string };
+    return {
+      message: tagged.message,
+      name: tagged._tag,
+      stack: tagged.stack,
       timestamp,
       ...context
     };
@@ -71,7 +138,6 @@ export function serializeError(error: unknown, context?: ErrorContext): Serializ
       ...context
     };
 
-    // Extract additional properties from error objects
     if ('code' in error && typeof error.code === 'string') {
       serialized.code = error.code;
     }
@@ -91,30 +157,28 @@ export function serializeError(error: unknown, context?: ErrorContext): Serializ
     };
   }
 
-  // Fallback for non-error types
   return { message: String(error), name: 'UnknownError', timestamp, ...context };
 }
 
 /**
- * Create a standardized error response
+ * Create a standardized error response body
  */
 export function createErrorResponse(
   error: unknown,
   context?: ErrorContext,
   isDevelopment = false
-): { error: string, details?: unknown, requestId?: string } {
+): { error: string; details?: unknown; requestId?: string } {
   const serialized = serializeError(error, context);
 
   return {
     error: serialized.message,
-    details: isDevelopment ?
-      {
-        name: serialized.name,
-        ...(serialized.zodErrors && { validationErrors: serialized.zodErrors }),
-        ...(serialized.stack && { stack: serialized.stack }),
-        ...(serialized.code && { code: serialized.code })
-      } :
-      undefined,
+    details: isDevelopment
+      ? {
+          name: serialized.name,
+          ...(serialized.stack && { stack: serialized.stack }),
+          ...(serialized.code && { code: serialized.code })
+        }
+      : undefined,
     requestId: context?.requestId
   };
 }

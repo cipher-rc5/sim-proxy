@@ -1,19 +1,19 @@
 // src/types/index.ts
 
-import { z } from 'zod';
+import { Schema } from 'effect';
 import { envSchema } from '../config/env';
 
 // Re-export error types
 export * from './errors';
 
 // Cloudflare Worker bindings with proper types
-export interface Env extends z.infer<typeof envSchema> {
+export interface Env extends Schema.Schema.Type<typeof envSchema> {
   RATE_LIMITER?: KVNamespace; // Optional for development, required for production
 }
 
 // Context variables with strict typing
 export interface Variables {
-  validatedEnv: z.infer<typeof envSchema>;
+  validatedEnv: Schema.Schema.Type<typeof envSchema>;
   requestId: string;
   subrequestCount: number;
   normalizedAddress?: string; // For address normalization middleware
