@@ -4,26 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
-import {
-  activityResponseSchema,
-  balancesResponseSchema,
-  chainsResponseSchema,
-  evmActivityQuerySchema,
-  evmAddressSchema,
-  evmBalancesQuerySchema,
-  evmCollectiblesQuerySchema,
-  evmDefiPositionsQuerySchema,
-  evmStablecoinsQuerySchema,
-  evmTokenHoldersQuerySchema,
-  evmTokenInfoQuerySchema,
-  evmTransactionsQuerySchema,
-  collectiblesResponseSchema,
-  defiPositionsResponseSchema,
-  stablecoinsResponseSchema,
-  tokenHoldersResponseSchema,
-  tokenInfoResponseSchema,
-  transactionsResponseSchema
-} from '../schemas/evm';
+import { type ActivityResponse, activityResponseSchema, type BalancesResponse, balancesResponseSchema, chainsResponseSchema, collectiblesResponseSchema, defiPositionsResponseSchema, evmActivityQuerySchema, evmAddressSchema, evmBalancesQuerySchema, evmCollectiblesQuerySchema, evmDefiPositionsQuerySchema, evmStablecoinsQuerySchema, evmTokenHoldersQuerySchema, evmTokenInfoQuerySchema, evmTransactionsQuerySchema, stablecoinsResponseSchema, tokenHoldersResponseSchema, tokenInfoResponseSchema, type TransactionsResponse, transactionsResponseSchema } from '../schemas/evm';
 import type { Variables } from '../types';
 import { createLogger } from '../utils/logger';
 import { proxyRequest } from '../utils/proxy';
@@ -36,13 +17,10 @@ evmRoutes.get('/supported-chains/:uri/:extra', (c) => {
 
   logger.warn('Malformed supported-chains path', { uri, extra, path: c.req.path });
 
-  return c.json(
-    {
-      error: 'Malformed supported-chains path',
-      hint: 'Use /v1/evm/supported-chains/{uri} (for example: /v1/evm/supported-chains/balances)'
-    },
-    400
-  );
+  return c.json({
+    error: 'Malformed supported-chains path',
+    hint: 'Use /v1/evm/supported-chains/{uri} (for example: /v1/evm/supported-chains/balances)'
+  }, 400);
 });
 
 // Supported Chains endpoint
@@ -118,7 +96,10 @@ evmRoutes.get(
     if (query.chain_ids) queryParams.set('chain_ids', query.chain_ids);
     if (query.filters) queryParams.set('filters', query.filters);
     if (query.metadata) queryParams.set('metadata', query.metadata);
-    if (query.exclude_spam_tokens !== undefined) queryParams.set('exclude_spam_tokens', String(query.exclude_spam_tokens));
+    if (query.exclude_spam_tokens !== undefined) {queryParams.set(
+        'exclude_spam_tokens',
+        String(query.exclude_spam_tokens)
+      );}
     if (query.historical_prices) queryParams.set('historical_prices', query.historical_prices);
     if (query.limit !== undefined) queryParams.set('limit', query.limit.toString());
     if (query.offset) queryParams.set('offset', query.offset);
@@ -160,7 +141,12 @@ evmRoutes.get(
     if (query.limit !== undefined) queryParams.set('limit', query.limit.toString());
     if (query.offset) queryParams.set('offset', query.offset);
 
-    return proxyRequest(c, `/v1/evm/token-holders/${chain_id}/${address.toLowerCase()}`, tokenHoldersResponseSchema, queryParams);
+    return proxyRequest(
+      c,
+      `/v1/evm/token-holders/${chain_id}/${address.toLowerCase()}`,
+      tokenHoldersResponseSchema,
+      queryParams
+    );
   }
 );
 
@@ -228,11 +214,11 @@ evmRoutes.get(
       );
 
       // Log success metrics
-      const data = await response.clone().json();
+      const data = await response.clone().json() as TransactionsResponse;
       logger.info('Transactions fetched successfully', {
         address: address.substring(0, 10) + '...',
-        transactionCount: (data as any).transactions?.length || 0,
-        hasNextOffset: !!(data as any).next_offset
+        transactionCount: data.transactions?.length ?? 0,
+        hasNextOffset: !!data.next_offset
       });
 
       return response;
@@ -274,13 +260,13 @@ evmRoutes.get(
 
     try {
       const response = await proxyRequest(c, `/v1/evm/activity/${address}`, activityResponseSchema, queryParams);
-      const data = await response.clone().json();
+      const data = await response.clone().json() as ActivityResponse;
 
       logger.info('Activity fetched successfully', {
         address: address.substring(0, 10) + '...',
-        activityCount: (data as any).activity?.length || 0,
-        warningCount: (data as any).warnings?.length || 0,
-        hasNextOffset: !!(data as any).next_offset
+        activityCount: data.activity?.length ?? 0,
+        warningCount: data.warnings?.length ?? 0,
+        hasNextOffset: !!data.next_offset
       });
 
       return response;
@@ -358,13 +344,13 @@ evmRoutes.get(
       const response = await proxyRequest(c, `/v1/evm/balances/${address}`, balancesResponseSchema, queryParams);
 
       // Log success metrics
-      const data = await response.clone().json();
+      const data = await response.clone().json() as BalancesResponse;
       logger.info('Balances fetched successfully', {
         address: address.substring(0, 10) + '...',
-        balanceCount: (data as any).balances?.length || 0,
-        totalUsdValue: (data as any).total_usd_value,
-        chainCount: (data as any).chain_count,
-        hasNextOffset: !!(data as any).next_offset
+        balanceCount: data.balances?.length ?? 0,
+        totalUsdValue: data.total_usd_value,
+        chainCount: data.chain_count,
+        hasNextOffset: !!data.next_offset
       });
 
       return response;

@@ -10,7 +10,16 @@ export const MAX_SUBREQUESTS = 45; // Leave buffer from 50 limit
 export const MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024; // 10MB request body limit
 
 // Public paths that don't require authentication
-export const PUBLIC_PATHS = ['/', '/favicon.ico', '/favicon.svg', '/health', '/docs', '/scalar', '/openapi.json', '/llms.txt'] as const;
+export const PUBLIC_PATHS = [
+  '/',
+  '/favicon.ico',
+  '/favicon.svg',
+  '/health',
+  '/docs',
+  '/scalar',
+  '/openapi.json',
+  '/llms.txt'
+] as const;
 export const PUBLIC_PATH_PREFIXES = ['/docs/', '/scalar/'] as const;
 
 // Rate limiting defaults

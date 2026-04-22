@@ -4,9 +4,10 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { svmAddressSchema, svmBalancesResponseSchema, svmQuerySchema, svmTransactionsResponseSchema } from '../schemas/svm';
+import type { Variables } from '../types';
 import { proxyRequest } from '../utils/proxy';
 
-export const svmRoutes = new Hono();
+export const svmRoutes = new Hono<{ Variables: Variables }>();
 
 // SVM Transactions
 svmRoutes.get(
@@ -21,7 +22,7 @@ svmRoutes.get(
     if (query.limit) queryParams.set('limit', query.limit.toString());
     if (query.offset) queryParams.set('offset', query.offset);
 
-    return proxyRequest(c as any, `/beta/svm/transactions/${address}`, svmTransactionsResponseSchema, queryParams);
+    return proxyRequest(c, `/beta/svm/transactions/${address}`, svmTransactionsResponseSchema, queryParams);
   }
 );
 
@@ -39,6 +40,6 @@ svmRoutes.get(
     if (query.limit) queryParams.set('limit', query.limit.toString());
     if (query.offset) queryParams.set('offset', query.offset);
 
-    return proxyRequest(c as any, `/beta/svm/balances/${address}`, svmBalancesResponseSchema, queryParams);
+    return proxyRequest(c, `/beta/svm/balances/${address}`, svmBalancesResponseSchema, queryParams);
   }
 );

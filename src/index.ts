@@ -161,6 +161,22 @@ app.get(
 // Alternative Scalar endpoint
 app.get('/scalar', (c) => c.redirect('/docs', 301));
 
+interface OpenApiParameter {
+  name: string;
+  in: string;
+  required?: boolean;
+  description?: string;
+  schema?: { type?: string };
+}
+
+interface OpenApiOperation {
+  tags?: string[];
+  summary?: string;
+  description?: string;
+  operationId?: string;
+  parameters?: OpenApiParameter[];
+}
+
 // Enhanced markdown documentation generator
 function generateMarkdownFromSpec(spec: typeof openAPISpec): string {
   const lines: string[] = [];
@@ -221,10 +237,10 @@ function generateMarkdownFromSpec(spec: typeof openAPISpec): string {
   // Endpoints by tag
   lines.push(`## Endpoints\n`);
 
-  const endpointsByTag = new Map<string, Array<{ path: string, method: string, details: any }>>();
+  const endpointsByTag = new Map<string, Array<{ path: string, method: string, details: OpenApiOperation }>>();
 
   for (const [path, methods] of Object.entries(spec.paths)) {
-    for (const [method, details] of Object.entries(methods as Record<string, any>)) {
+    for (const [method, details] of Object.entries(methods as Record<string, OpenApiOperation>)) {
       const tags = details.tags || ['Other'];
       for (const tag of tags) {
         if (!endpointsByTag.has(tag)) {
@@ -251,11 +267,11 @@ function generateMarkdownFromSpec(spec: typeof openAPISpec): string {
       }
 
       // Parameters
-      if (details.parameters?.length > 0) {
+      if ((details.parameters?.length ?? 0) > 0) {
         lines.push('**Parameters:**\n');
         lines.push('| Name | Type | In | Required | Description |');
         lines.push('|------|------|----|----------|-------------|');
-        for (const param of details.parameters) {
+        for (const param of details.parameters!) {
           const required = param.required ? '✓' : '';
           const schema = param.schema?.type || 'string';
           lines.push(`| ${param.name} | ${schema} | ${param.in} | ${required} | ${param.description || '-'} |`);
@@ -324,10 +340,10 @@ app.route('/v1/evm', evmRoutes);
 app.route('/beta/svm', svmRoutes);
 
 // Error handling
-app.onError((err, c) => errorHandler(err, c as any));
+app.onError((err, c) => errorHandler(err, c));
 
 // 404 handler
-app.notFound((c) => notFoundHandler(c as any));
+app.notFound((c) => notFoundHandler(c));
 
 // Export for Cloudflare Workers
 export default app;

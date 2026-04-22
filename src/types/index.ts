@@ -45,6 +45,9 @@ export interface APIResponse<T = unknown> {
   requestId?: string;
 }
 
+// Full application environment type — used by error handlers and middleware that need both Bindings and Variables
+export type AppEnv = { Bindings: Env, Variables: Variables };
+
 // Proxy configuration
 export interface ProxyConfig {
   maxRetries?: number;

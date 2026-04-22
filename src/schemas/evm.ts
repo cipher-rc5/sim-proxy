@@ -123,10 +123,7 @@ export const activityItemSchema = z.object({
   to: z.string().nullable().optional(),
   value: z.string().optional(),
   value_usd: z.number().nullable().optional(),
-  function: z.object({
-    name: z.string().optional(),
-    signature: z.string().optional()
-  }).partial().optional(),
+  function: z.object({ name: z.string().optional(), signature: z.string().optional() }).partial().optional(),
   token_metadata: z.object({
     symbol: z.string().nullable().optional(),
     decimals: z.number().nullable().optional(),
@@ -194,11 +191,10 @@ export const tokenHoldersResponseSchema = z.object({
 }).passthrough();
 
 export const defiPositionsResponseSchema = z.object({
-  positions: z.array(z.object({
-    type: z.string(),
-    chain_id: z.number().optional(),
-    usd_value: z.number().nullable().optional()
-  }).passthrough()),
+  positions: z.array(
+    z.object({ type: z.string(), chain_id: z.number().optional(), usd_value: z.number().nullable().optional() })
+      .passthrough()
+  ),
   aggregations: z.object({
     total_usd_value: z.number().optional(),
     total_by_chain: z.record(z.string(), z.number()).optional()
@@ -226,7 +222,9 @@ export const evmBalancesQuerySchema = paginationQuerySchema.extend({
   chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags'),
   filters: z.enum(['erc20', 'native']).optional().describe('Filter by token type'),
   exclude_spam_tokens: z.coerce.boolean().optional().describe('Exclude low-liquidity spam tokens'),
-  historical_prices: z.string().optional().describe('Comma-separated hour offsets for historical prices (max 3 values)'),
+  historical_prices: z.string().optional().describe(
+    'Comma-separated hour offsets for historical prices (max 3 values)'
+  ),
   metadata: z.string().optional().describe('Additional metadata fields to include (comma-separated)').refine(
     (val) => !val || val.split(',').every(field => field.trim().length > 0),
     'Metadata fields must not be empty'
@@ -236,7 +234,9 @@ export const evmBalancesQuerySchema = paginationQuerySchema.extend({
 export const evmActivityQuerySchema = paginationQuerySchema.extend({
   chain_ids: z.string().optional().describe('Comma-separated chain IDs or tags'),
   token_address: z.string().optional().describe('Single or comma-separated token addresses'),
-  activity_type: z.string().optional().describe('Single or comma-separated values of send,receive,mint,burn,swap,approve,call'),
+  activity_type: z.string().optional().describe(
+    'Single or comma-separated values of send,receive,mint,burn,swap,approve,call'
+  ),
   asset_type: z.string().optional().describe('Single or comma-separated values of native,erc20,erc721,erc1155')
 });
 
@@ -251,12 +251,16 @@ export const evmStablecoinsQuerySchema = paginationQuerySchema.extend({
   filters: z.enum(['erc20', 'native']).optional().describe('Filter by token type'),
   metadata: z.string().optional().describe('Additional metadata fields to include (comma-separated)'),
   exclude_spam_tokens: z.coerce.boolean().optional().describe('Exclude low-liquidity spam tokens'),
-  historical_prices: z.string().optional().describe('Comma-separated hour offsets for historical prices (max 3 values)')
+  historical_prices: z.string().optional().describe(
+    'Comma-separated hour offsets for historical prices (max 3 values)'
+  )
 });
 
 export const evmTokenInfoQuerySchema = paginationQuerySchema.extend({
   chain_ids: z.string().min(1).describe('Exactly one chain ID is required by upstream'),
-  historical_prices: z.string().optional().describe('Comma-separated hour offsets for historical prices (max 3 values)')
+  historical_prices: z.string().optional().describe(
+    'Comma-separated hour offsets for historical prices (max 3 values)'
+  )
 });
 
 export const evmTokenHoldersQuerySchema = z.object({

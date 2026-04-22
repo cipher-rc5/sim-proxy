@@ -3,15 +3,7 @@
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
-import {
-  CACHE_CONFIG,
-  DEDUP_CONFIG,
-  DUNE_SIM_BASE_ENDPOINT,
-  HEADERS,
-  MAX_REQUEST_BODY_SIZE,
-  MAX_RESPONSE_SIZE,
-  MAX_SUBREQUESTS
-} from '../config/constants';
+import { CACHE_CONFIG, DEDUP_CONFIG, DUNE_SIM_BASE_ENDPOINT, HEADERS, MAX_REQUEST_BODY_SIZE, MAX_RESPONSE_SIZE, MAX_SUBREQUESTS } from '../config/constants';
 import type { ValidatedEnv } from '../config/env';
 import type { Variables } from '../types';
 import { serializeError } from '../types/errors';
@@ -173,9 +165,9 @@ async function executeProxyRequest<T extends z.ZodSchema>(
           });
 
           throw new HTTPException(502, {
-              message: 'Invalid response schema from upstream API',
-              cause: validatedEnv.NODE_ENV === 'development' ? error.issues : undefined
-            });
+            message: 'Invalid response schema from upstream API',
+            cause: validatedEnv.NODE_ENV === 'development' ? error.issues : undefined
+          });
         }
         throw error;
       }

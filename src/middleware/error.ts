@@ -5,7 +5,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { HEADERS } from '../config/constants';
 import type { ValidatedEnv } from '../config/env';
-import type { Variables } from '../types';
+import type { AppEnv } from '../types';
 import { createErrorResponse, serializeError } from '../types/errors';
 import { createLogger } from '../utils/logger';
 
@@ -17,7 +17,7 @@ interface ErrorResponse {
   timestamp: string;
 }
 
-export const errorHandler = (err: Error, c: Context<{ Variables: Variables }>): Response => {
+export const errorHandler = (err: Error, c: Context<AppEnv>): Response => {
   const logger = createLogger(c);
   const validatedEnv = c.get('validatedEnv') as ValidatedEnv | undefined;
   const isDevelopment = validatedEnv?.NODE_ENV === 'development';
@@ -91,7 +91,7 @@ export const errorHandler = (err: Error, c: Context<{ Variables: Variables }>): 
 };
 
 // Not found handler
-export const notFoundHandler = (c: Context<{ Variables: Variables }>): Response => {
+export const notFoundHandler = (c: Context<AppEnv>): Response => {
   const logger = createLogger(c);
   const requestId = c.get('requestId');
   const validatedEnv = c.get('validatedEnv') as ValidatedEnv | undefined;

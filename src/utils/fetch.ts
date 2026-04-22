@@ -62,14 +62,14 @@ export async function fetchWithRetry(
       logger?.debug(`Fetching URL (attempt ${attempt}/${maxRetries})`, { url, method: options.method || 'GET' });
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs);
+      const timeoutId = setTimeout(
+        () => controller.abort(new Error(`Request timed out after ${timeoutMs}ms`)),
+        timeoutMs
+      );
 
       let response: Response;
       try {
-        response = await fetch(url, {
-          ...options,
-          signal: controller.signal
-        });
+        response = await fetch(url, { ...options, signal: controller.signal });
       } finally {
         clearTimeout(timeoutId);
       }

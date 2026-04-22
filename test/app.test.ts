@@ -42,22 +42,12 @@ describe('application baseline behavior', () => {
   it('sets CORS header only for explicitly allowed origin', async () => {
     const allowedOrigin = 'https://app.example.com';
     const disallowedRes = await app.request('http://localhost/health', {
-      headers: {
-        Origin: 'https://evil.example.com'
-      }
-    }, {
-      ...baseEnv,
-      NODE_ENV: 'production',
-      ALLOWED_ORIGINS: allowedOrigin
-    });
+      headers: { Origin: 'https://evil.example.com' }
+    }, { ...baseEnv, NODE_ENV: 'production', ALLOWED_ORIGINS: allowedOrigin });
 
     expect(disallowedRes.headers.get('access-control-allow-origin')).toBeNull();
 
-    const allowedRes = await app.request('http://localhost/health', {
-      headers: {
-        Origin: allowedOrigin
-      }
-    }, {
+    const allowedRes = await app.request('http://localhost/health', { headers: { Origin: allowedOrigin } }, {
       ...baseEnv,
       NODE_ENV: 'production',
       ALLOWED_ORIGINS: allowedOrigin
@@ -69,11 +59,7 @@ describe('application baseline behavior', () => {
   it('returns a hint for malformed supported-chains URLs', async () => {
     const res = await app.request(
       'http://localhost/v1/evm/supported-chains/balances/0xE8a090Cf0a138c971ffDbdf52c2B7AD2f7bCeBb6',
-      {
-        headers: {
-          Authorization: `Bearer ${baseEnv.WORKER_API_KEY}`
-        }
-      },
+      { headers: { Authorization: `Bearer ${baseEnv.WORKER_API_KEY}` } },
       baseEnv
     );
 

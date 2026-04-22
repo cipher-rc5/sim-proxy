@@ -144,13 +144,7 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
           to: { type: 'string', nullable: true },
           value: { type: 'string' },
           value_usd: { type: 'number', nullable: true },
-          function: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              signature: { type: 'string' }
-            }
-          },
+          function: { type: 'object', properties: { name: { type: 'string' }, signature: { type: 'string' } } },
           token_metadata: {
             type: 'object',
             nullable: true,
@@ -704,43 +698,47 @@ Please be mindful of rate limits imposed by the upstream Dune Sim API.
         description: 'Get stablecoin balances for an EVM address',
         operationId: 'getEvmStablecoins',
         tags: ['EVM'],
-        parameters: [{
-          name: 'address',
-          in: 'path',
-          required: true,
-          description: 'EVM address (0x...)',
-          schema: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
-        }, {
-          name: 'chain_ids',
-          in: 'query',
-          description: 'Comma-separated chain IDs or tags',
-          schema: { type: 'string' }
-        }, {
-          name: 'filters',
-          in: 'query',
-          description: 'Filter by token type',
-          schema: { type: 'string', enum: ['erc20', 'native'] }
-        }, {
-          name: 'metadata',
-          in: 'query',
-          description: 'Additional metadata fields',
-          schema: { type: 'string' }
-        }, {
-          name: 'exclude_spam_tokens',
-          in: 'query',
-          description: 'Exclude low-liquidity spam tokens from response',
-          schema: { type: 'boolean' }
-        }, {
-          name: 'historical_prices',
-          in: 'query',
-          description: 'Comma-separated hour offsets for historical pricing (max 3)',
-          schema: { type: 'string' }
-        }, {
-          name: 'limit',
-          in: 'query',
-          description: 'Maximum number of results',
-          schema: { type: 'integer', minimum: 1, maximum: 1000 }
-        }, { name: 'offset', in: 'query', description: 'Pagination cursor', schema: { type: 'string' } }],
+        parameters: [
+          {
+            name: 'address',
+            in: 'path',
+            required: true,
+            description: 'EVM address (0x...)',
+            schema: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
+          },
+          {
+            name: 'chain_ids',
+            in: 'query',
+            description: 'Comma-separated chain IDs or tags',
+            schema: { type: 'string' }
+          },
+          {
+            name: 'filters',
+            in: 'query',
+            description: 'Filter by token type',
+            schema: { type: 'string', enum: ['erc20', 'native'] }
+          },
+          { name: 'metadata', in: 'query', description: 'Additional metadata fields', schema: { type: 'string' } },
+          {
+            name: 'exclude_spam_tokens',
+            in: 'query',
+            description: 'Exclude low-liquidity spam tokens from response',
+            schema: { type: 'boolean' }
+          },
+          {
+            name: 'historical_prices',
+            in: 'query',
+            description: 'Comma-separated hour offsets for historical pricing (max 3)',
+            schema: { type: 'string' }
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Maximum number of results',
+            schema: { type: 'integer', minimum: 1, maximum: 1000 }
+          },
+          { name: 'offset', in: 'query', description: 'Pagination cursor', schema: { type: 'string' } }
+        ],
         responses: {
           '200': {
             description: 'Stablecoin balances list',
