@@ -23,6 +23,6 @@
     "@scalar/hono-api-reference": "0.10.10",
     "@scalar/openapi-types": "0.8.0",
     "effect": "3.21.2",
-    "hono": "4.12.15"
+    "hono": "4.12.18"
   }
 }
